@@ -8,9 +8,30 @@ interface PinModalProps {
   pin: any
   isAdmin: boolean
   onPinUpdate: () => void
+  onEditPin?: (pin: any) => void
+  onDeletePin?: (pinId: string) => void
+  currentUserId?: string
 }
 
-export default function PinModal({ isOpen, onClose, pin, isAdmin, onPinUpdate }: PinModalProps) {
+export default function PinModal({ 
+  isOpen, 
+  onClose, 
+  pin, 
+  isAdmin, 
+  onPinUpdate, 
+  onEditPin, 
+  onDeletePin, 
+  currentUserId 
+}: PinModalProps) {
+  // Check if current user is the author of this pin
+  const isAuthor = pin?.created_by === currentUserId && isAdmin
+  
+  // Debug logging
+  console.log('PinModal - pin:', pin)
+  console.log('PinModal - currentUserId:', currentUserId)
+  console.log('PinModal - isAdmin:', isAdmin)
+  console.log('PinModal - pin.created_by:', pin?.created_by)
+  console.log('PinModal - isAuthor:', isAuthor)
   return (
     <BaseModal
       isOpen={isOpen}
@@ -86,7 +107,34 @@ export default function PinModal({ isOpen, onClose, pin, isAdmin, onPinUpdate }:
         </div>
 
         {/* Action Buttons */}
-        <div className="flex justify-center pt-4">
+        <div className="flex justify-center pt-4 space-x-3">
+          {isAuthor && onEditPin && (
+            <button
+              onClick={() => onEditPin(pin)}
+              className="modal-button modal-button-primary"
+            >
+              Edit
+            </button>
+          )}
+          
+          {isAuthor && onDeletePin && (
+            <button
+              onClick={() => {
+                if (confirm(`Are you sure you want to delete "${pin?.title}"?`)) {
+                  onDeletePin(pin.id)
+                }
+              }}
+              className="modal-button modal-button-secondary"
+              style={{ 
+                background: 'rgba(239, 68, 68, 0.1)', 
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                color: '#fca5a5'
+              }}
+            >
+              Delete
+            </button>
+          )}
+          
           <button
             onClick={onClose}
             className="modal-button modal-button-secondary"

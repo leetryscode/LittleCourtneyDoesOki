@@ -130,6 +130,40 @@ export default function Home() {
     window.location.reload()
   }
 
+  const handleEditPin = (pin: PinWithPhotos) => {
+    // For now, just close the modal - we'll implement edit modal later
+    console.log('Edit pin:', pin.title)
+    // TODO: Open edit modal
+  }
+
+  const handleDeletePin = async (pinId: string) => {
+    try {
+      console.log('Starting delete for pin:', pinId)
+      console.log('Current user:', user?.id)
+      
+      // Try delete without .select() first
+      console.log('Attempting delete without select...')
+      const { error } = await supabase
+        .from('pins')
+        .delete()
+        .eq('id', pinId)
+      
+      console.log('Delete response - error:', error)
+      
+      if (error) {
+        console.error('Supabase error:', error)
+        throw error
+      }
+
+      console.log('Delete successful!')
+      // Refresh the map to show updated pins
+      window.location.reload()
+    } catch (error) {
+      console.error('Error deleting pin:', error)
+      alert(`Failed to delete pin: ${error.message}`)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 relative">
       <Header
@@ -157,6 +191,9 @@ export default function Home() {
           pin={selectedPin}
           isAdmin={isAdmin}
           onPinUpdate={handlePinUpdate}
+          onEditPin={handleEditPin}
+          onDeletePin={handleDeletePin}
+          currentUserId={user?.id}
         />
       )}
 
