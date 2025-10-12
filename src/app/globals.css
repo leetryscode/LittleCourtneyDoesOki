@@ -1,0 +1,674 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 255, 255, 255;
+  --background-start-rgb: 214, 219, 220;
+  --background-end-rgb: 255, 255, 255;
+  
+  /* Modal Theme Variables */
+  --modal-bg: rgba(255, 255, 255, 0.1);
+  --modal-backdrop: rgba(0, 0, 0, 0.6);
+  --modal-border-radius: 1.5rem;
+  --modal-padding: 2rem;
+  --modal-shadow: 0 25px 50px -12px rgba(6, 182, 212, 0.3);
+  --modal-blur: 16px;
+  
+  /* Form Theme Variables */
+  --input-padding: 0.875rem 1rem;
+  --input-border-radius: 0.75rem;
+  --input-spacing: 1.5rem;
+  --button-padding: 0.875rem 2rem;
+  --button-border-radius: 0.75rem;
+  
+  /* Animation Variables */
+  --modal-animation-duration: 0.3s;
+  --modal-animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --foreground-rgb: 255, 255, 255;
+    --background-start-rgb: 0, 0, 0;
+    --background-end-rgb: 0, 0, 0;
+  }
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+      to bottom,
+      transparent,
+      rgb(var(--background-end-rgb))
+    )
+    rgb(var(--background-start-rgb));
+}
+
+/* Custom styles for map components */
+.leaflet-container {
+  z-index: 1;
+  position: relative;
+}
+
+.leaflet-popup-content {
+  margin: 8px 12px;
+}
+
+.leaflet-popup-content-wrapper {
+  border-radius: 8px;
+}
+
+/* Header-specific styles to override any conflicts */
+header h1 {
+  color: #ffffff !important;
+}
+
+/* Remove any potential conflicting elements */
+header .leaflet-control-zoom,
+header .leaflet-control-attribution,
+header .leaflet-control-layers {
+  display: none !important;
+}
+
+/* Completely hide all zoom controls */
+.leaflet-control-zoom,
+.leaflet-control-zoom-in,
+.leaflet-control-zoom-out {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+}
+
+/* Ensure header text is always white */
+header h1,
+header .header-title {
+  color: #ffffff !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* Specific rule for subtitle to ensure teal color */
+header p.animate-slide-up {
+  color: #67e8f9 !important; /* text-cyan-200 equivalent */
+}
+
+/* Even more specific rule to override any conflicts */
+header .text-cyan-200,
+header p.text-cyan-200 {
+  color: #67e8f9 !important;
+}
+
+/* Custom Animations for Header */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes modal-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Animation Classes */
+.animate-fade-in {
+  animation: fade-in 1s ease-out forwards;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.8s ease-out forwards;
+  opacity: 0;
+}
+
+.animate-modal-enter {
+  animation: modal-enter 0.3s ease-out forwards;
+}
+
+/* Animation Delays */
+.animation-delay-200 {
+  animation-delay: 200ms;
+}
+
+.animation-delay-400 {
+  animation-delay: 400ms;
+}
+
+/* Smooth scrolling for better parallax effect */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Ensure proper z-index stacking */
+header {
+  z-index: 40;
+  position: relative;
+}
+
+/* Make header background more transparent */
+header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(30, 58, 138, 0.3) 0%, rgba(30, 58, 138, 0.2) 100%);
+  pointer-events: none;
+}
+
+/* Ensure map is visible behind header */
+.leaflet-container {
+  z-index: 1;
+  position: relative;
+}
+
+/* Header content should be above the overlay */
+header > * {
+  position: relative;
+  z-index: 10;
+}
+
+/* Mobile-specific optimizations */
+@media (max-width: 768px) {
+  /* Ensure minimum touch target sizes */
+  button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Optimize text sizes for mobile */
+  h1 {
+    font-size: clamp(2rem, 8vw, 3rem);
+  }
+  
+  /* Ensure proper spacing on mobile */
+  .space-y-3 > * + * {
+    margin-top: 0.75rem;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  header {
+    border-bottom: 2px solid white;
+  }
+  
+  button {
+    border: 2px solid currentColor;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  
+  .animate-fade-in,
+  .animate-slide-up,
+  .animate-modal-enter {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+} 
+
+/* Header text shadows for better readability over map */
+header h1,
+header .animate-slide-up {
+  text-shadow: 
+    0 2px 4px rgba(0, 0, 0, 0.8),
+    0 4px 8px rgba(0, 0, 0, 0.6),
+    0 8px 16px rgba(0, 0, 0, 0.4);
+}
+
+header p {
+  text-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.8),
+    0 2px 4px rgba(0, 0, 0, 0.6);
+} 
+
+/* Ensure authentication buttons are at the very bottom */
+.fixed.bottom-0 {
+  bottom: 0 !important;
+  position: fixed !important;
+}
+
+/* Override any conflicting positioning */
+[style*="bottom: 0px"] {
+  bottom: 0 !important;
+} 
+
+/* Override Tailwind colors with higher specificity */
+* {
+  color: white !important;
+}
+
+/* Specific overrides for common elements */
+p, span, div, button, input, textarea, label, h1, h2, h3, h4, h5, h6 {
+  color: white !important;
+}
+
+/* Override Tailwind text color utilities */
+.text-black, .text-gray-900, .text-gray-800, .text-gray-700, .text-gray-600, .text-gray-500, .text-gray-400, .text-gray-300, .text-gray-200, .text-gray-100 {
+  color: white !important;
+}
+
+/* Ensure buttons have white text */
+button, .btn, [class*="bg-"] {
+  color: white !important;
+}
+
+/* Override any inline styles */
+[style*="color"] {
+  color: white !important;
+} 
+
+/* Ensure authentication buttons have white text */
+.fixed.bottom-0 button,
+.fixed.bottom-0 span,
+.fixed.bottom-0 * {
+  color: white !important;
+}
+
+/* Override any Tailwind text color utilities on auth buttons */
+.fixed.bottom-0 .text-white,
+.fixed.bottom-0 .text-black,
+.fixed.bottom-0 .text-gray-900 {
+  color: white !important;
+} 
+
+/* Force authentication buttons to be transparent with white outlines */
+.fixed.bottom-4 button,
+.fixed.bottom-4 .bg-transparent,
+.fixed.bottom-4 .border-white {
+  background-color: transparent !important;
+  border: 2px solid white !important;
+  color: white !important;
+}
+
+/* Override any black backgrounds specifically */
+.fixed.bottom-4 button[class*="bg-"],
+.fixed.bottom-4 button.bg-black,
+.fixed.bottom-4 button.bg-gray-900 {
+  background-color: transparent !important;
+}
+
+/* Ensure proper spacing between buttons */
+.fixed.bottom-4 .space-x-4 > * + * {
+  margin-left: 1rem !important;
+} 
+
+/* Target the unique auth buttons container */
+.auth-buttons-container {
+  bottom: 1rem !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  position: fixed !important;
+  z-index: 50 !important;
+  width: auto !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+}
+
+.auth-buttons-container button {
+  background-color: transparent !important;
+  border: 2px solid white !important;
+  color: white !important;
+}
+
+/* Ensure proper spacing between buttons */
+.auth-buttons-container .space-x-4 > * + * {
+  margin-left: 1rem !important;
+}
+
+/* Center the button row horizontally */
+.auth-buttons-container .flex {
+  justify-content: center !important;
+  align-items: center !important;
+} 
+
+/* ===========================================
+   MODAL THEME SYSTEM
+   =========================================== */
+
+/* Base Modal Overlay */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--modal-backdrop);
+  backdrop-filter: blur(var(--modal-blur));
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  animation: modal-overlay-enter var(--modal-animation-duration) var(--modal-animation-easing);
+}
+
+@keyframes modal-overlay-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Base Modal Content */
+.modal-content {
+  background: var(--modal-bg);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--modal-border-radius);
+  padding: var(--modal-padding);
+  box-shadow: var(--modal-shadow);
+  width: 100%;
+  max-width: 28rem;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: modal-content-enter var(--modal-animation-duration) var(--modal-animation-easing);
+  position: relative;
+  backdrop-filter: blur(var(--modal-blur));
+}
+
+@keyframes modal-content-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Modal Header */
+.modal-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.modal-title {
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: #06b6d4;
+  margin: 0 0 0.5rem 0;
+  line-height: 1.2;
+  text-shadow: 0 0 20px rgba(6, 182, 212, 0.5);
+}
+
+.modal-subtitle {
+  font-size: 1rem;
+  color: #14b8a6;
+  margin: 0;
+  text-shadow: 0 0 10px rgba(20, 184, 166, 0.3);
+}
+
+/* Form Styling */
+.modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--input-spacing);
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #06b6d4;
+  margin: 0;
+  text-shadow: 0 0 10px rgba(6, 182, 212, 0.3);
+}
+
+.form-input {
+  padding: var(--input-padding);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: var(--input-border-radius);
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  background: rgba(0, 0, 0, 0.8);
+  color: #ffffff;
+  backdrop-filter: blur(8px);
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #06b6d4;
+  box-shadow: 
+    0 0 0 3px rgba(6, 182, 212, 0.3),
+    0 0 20px rgba(6, 182, 212, 0.4);
+  background: rgba(0, 0, 0, 0.9);
+}
+
+.form-input::placeholder {
+  color: #9ca3af;
+  opacity: 0.8;
+}
+
+/* Button Styling */
+.modal-button {
+  padding: var(--button-padding);
+  border-radius: var(--button-border-radius);
+  font-weight: 600;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.modal-button-primary {
+  background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+  color: white;
+  box-shadow: 
+    0 4px 14px 0 rgba(6, 182, 212, 0.4),
+    0 0 20px rgba(6, 182, 212, 0.3);
+  border: 1px solid rgba(6, 182, 212, 0.3);
+}
+
+.modal-button-primary:hover {
+  background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%);
+  transform: translateY(-1px);
+  box-shadow: 
+    0 6px 20px 0 rgba(6, 182, 212, 0.5),
+    0 0 30px rgba(6, 182, 212, 0.4);
+  border-color: rgba(6, 182, 212, 0.5);
+}
+
+.modal-button-primary:active {
+  transform: translateY(0);
+  box-shadow: 
+    0 2px 8px 0 rgba(6, 182, 212, 0.4),
+    0 0 15px rgba(6, 182, 212, 0.3);
+}
+
+.modal-button-secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: #06b6d4;
+  border: 1px solid rgba(6, 182, 212, 0.3);
+  backdrop-filter: blur(8px);
+}
+
+.modal-button-secondary:hover {
+  background: rgba(6, 182, 212, 0.1);
+  border-color: rgba(6, 182, 212, 0.5);
+  color: #14b8a6;
+  box-shadow: 0 0 15px rgba(6, 182, 212, 0.2);
+}
+
+.modal-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Error Messages */
+.form-error {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: var(--input-border-radius);
+  padding: 0.75rem;
+  margin-top: 0.5rem;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
+}
+
+.form-error-text {
+  color: #fca5a5;
+  font-size: 0.875rem;
+  margin: 0;
+  text-shadow: 0 0 5px rgba(239, 68, 68, 0.5);
+}
+
+/* Success Messages */
+.form-success {
+  background: rgba(6, 182, 212, 0.1);
+  border: 1px solid rgba(6, 182, 212, 0.3);
+  border-radius: var(--input-border-radius);
+  padding: 0.75rem;
+  margin-top: 0.5rem;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 0 10px rgba(6, 182, 212, 0.2);
+}
+
+.form-success-text {
+  color: #67e8f9;
+  font-size: 0.875rem;
+  margin: 0;
+  text-shadow: 0 0 5px rgba(6, 182, 212, 0.5);
+}
+
+/* Loading States */
+.modal-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.modal-spinner {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid #06b6d4;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  box-shadow: 0 0 10px rgba(6, 182, 212, 0.3);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 640px) {
+  .modal-content {
+    margin: 0.5rem;
+    padding: 1.5rem;
+    max-width: none;
+  }
+  
+  .modal-title {
+    font-size: 1.5rem;
+  }
+  
+  .form-input {
+    padding: 0.75rem;
+  }
+  
+  .modal-button {
+    padding: 0.75rem 1.5rem;
+  }
+}
+
+/* Dark mode support for modals - Enhanced turquoise theme */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --modal-bg: rgba(0, 0, 0, 0.15);
+    --modal-shadow: 0 25px 50px -12px rgba(6, 182, 212, 0.4);
+  }
+  
+  .modal-title {
+    color: #06b6d4;
+    text-shadow: 0 0 25px rgba(6, 182, 212, 0.6);
+  }
+  
+  .modal-subtitle {
+    color: #14b8a6;
+    text-shadow: 0 0 15px rgba(20, 184, 166, 0.4);
+  }
+  
+  .form-label {
+    color: #06b6d4;
+    text-shadow: 0 0 12px rgba(6, 182, 212, 0.4);
+  }
+  
+  .form-input {
+    background: rgba(0, 0, 0, 0.85);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+  }
+  
+  .form-input:focus {
+    border-color: #06b6d4;
+    background: rgba(0, 0, 0, 0.95);
+    box-shadow: 
+      0 0 0 3px rgba(6, 182, 212, 0.4),
+      0 0 25px rgba(6, 182, 212, 0.5);
+  }
+  
+  .form-input::placeholder {
+    color: #9ca3af;
+    opacity: 0.9;
+  }
+  
+  .modal-button-secondary {
+    background: rgba(0, 0, 0, 0.2);
+    color: #06b6d4;
+    border-color: rgba(6, 182, 212, 0.4);
+  }
+  
+  .modal-button-secondary:hover {
+    background: rgba(6, 182, 212, 0.15);
+    border-color: rgba(6, 182, 212, 0.6);
+    color: #14b8a6;
+    box-shadow: 0 0 20px rgba(6, 182, 212, 0.3);
+  }
+}
