@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import BaseModal from './BaseModal'
+import CoordinatesDisplay from './CoordinatesDisplay'
 
 interface AddPinModalProps {
   isOpen: boolean
@@ -18,7 +19,6 @@ export default function AddPinModal({ isOpen, onClose, lat, lng, onPinAdded }: A
     description: '',
     category: '',
     rating: 5,
-    notes: '',
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -42,12 +42,11 @@ export default function AddPinModal({ isOpen, onClose, lat, lng, onPinAdded }: A
           lng,
           created_by: user.id,
           rating: formData.rating,
-          notes: formData.notes,
         })
 
       if (insertError) throw insertError
 
-      setFormData({ title: '', description: '', category: '', rating: 5, notes: '' })
+      setFormData({ title: '', description: '', category: '', rating: 5 })
       onPinAdded()
       onClose()
     } catch (error: any) {
@@ -62,7 +61,7 @@ export default function AddPinModal({ isOpen, onClose, lat, lng, onPinAdded }: A
       isOpen={isOpen}
       onClose={onClose}
       title="Add New Location"
-      subtitle={`📍 ${lat.toFixed(6)}, ${lng.toFixed(6)}`}
+      subtitle={<CoordinatesDisplay lat={lat} lng={lng} />}
     >
       <form onSubmit={handleSubmit} className="modal-form">
         <div className="form-field">
@@ -113,10 +112,7 @@ export default function AddPinModal({ isOpen, onClose, lat, lng, onPinAdded }: A
             <option value="Restaurant">🍽️ Restaurant</option>
             <option value="Activity">🎯 Activity</option>
             <option value="View">🌅 View</option>
-            <option value="Hotel">🏨 Hotel</option>
             <option value="Historical">🏛️ Historical</option>
-            <option value="Shopping">🛍️ Shopping</option>
-            <option value="Transportation">🚗 Transportation</option>
             <option value="General">📍 General</option>
           </select>
         </div>
@@ -140,28 +136,13 @@ export default function AddPinModal({ isOpen, onClose, lat, lng, onPinAdded }: A
           </select>
         </div>
 
-        <div className="form-field">
-          <label htmlFor="notes" className="form-label">
-            Notes (Optional)
-          </label>
-          <textarea
-            id="notes"
-            value={formData.notes}
-            onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-            className="form-input"
-            rows={2}
-            placeholder="Additional notes or tips"
-            disabled={loading}
-          />
-        </div>
-
         {error && (
           <div className="form-error">
             <p className="form-error-text">{error}</p>
           </div>
         )}
 
-        <div className="flex space-x-3 pt-2">
+        <div className="flex pt-2" style={{ gap: '2rem' }}>
           <button
             type="button"
             onClick={onClose}
@@ -174,6 +155,7 @@ export default function AddPinModal({ isOpen, onClose, lat, lng, onPinAdded }: A
             type="submit"
             disabled={loading}
             className="modal-button modal-button-primary flex-1"
+            style={{ marginLeft: '2rem' }}
           >
             {loading && <div className="modal-spinner" />}
             {loading ? 'Adding...' : 'Add Location'}

@@ -6,7 +6,7 @@ interface BaseModalProps {
   isOpen: boolean
   onClose: () => void
   title?: string
-  subtitle?: string
+  subtitle?: string | React.ReactElement
   children: React.ReactNode
   className?: string
   maxWidth?: string
@@ -72,9 +72,9 @@ export default function BaseModal({
               </h2>
             )}
             {subtitle && (
-              <p className="modal-subtitle">
+              <div className="modal-subtitle">
                 {subtitle}
-              </p>
+              </div>
             )}
           </div>
         )}

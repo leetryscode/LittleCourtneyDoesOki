@@ -1,6 +1,7 @@
 'use client'
 
 import BaseModal from './BaseModal'
+import CoordinatesDisplay from './CoordinatesDisplay'
 
 interface PinModalProps {
   isOpen: boolean
@@ -102,8 +103,8 @@ export default function PinModal({
         )}
 
         {/* Coordinates */}
-        <div className="text-center text-sm text-gray-500">
-          <p>📍 {pin?.lat?.toFixed(6)}, {pin?.lng?.toFixed(6)}</p>
+        <div className="text-center text-sm">
+          <CoordinatesDisplay lat={pin?.lat || 0} lng={pin?.lng || 0} />
         </div>
 
         {/* Action Buttons */}
