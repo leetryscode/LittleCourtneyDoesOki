@@ -42,7 +42,7 @@ export default function PinModal({
     >
       <div className="space-y-6">
         {/* Description */}
-        <div>
+        <div className="text-center">
           <p className="text-gray-600 leading-relaxed">{pin?.description}</p>
         </div>
         
@@ -108,11 +108,12 @@ export default function PinModal({
         </div>
 
         {/* Action Buttons */}
-        <div className="flex justify-center pt-4 space-x-3">
+        <div className="flex justify-center pt-4" style={{ gap: '1rem' }}>
           {isAuthor && onEditPin && (
             <button
               onClick={() => onEditPin(pin)}
               className="modal-button modal-button-primary"
+              style={{ marginLeft: '0', marginRight: '0' }}
             >
               Edit
             </button>
@@ -129,7 +130,9 @@ export default function PinModal({
               style={{ 
                 background: 'rgba(239, 68, 68, 0.1)', 
                 border: '1px solid rgba(239, 68, 68, 0.3)',
-                color: '#fca5a5'
+                color: '#fca5a5',
+                marginLeft: '0',
+                marginRight: '0'
               }}
             >
               Delete
@@ -139,6 +142,7 @@ export default function PinModal({
           <button
             onClick={onClose}
             className="modal-button modal-button-secondary"
+            style={{ marginLeft: '0', marginRight: '0' }}
           >
             Close
           </button>
