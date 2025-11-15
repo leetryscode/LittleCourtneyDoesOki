@@ -82,6 +82,15 @@ export default function OkinawaMapComponent({ onPinClick, onAddPin, isAdmin }: O
         `)
         .order('created_at', { ascending: false })
 
+      // Sort photos by order_index for each pin
+      if (pinsData) {
+        pinsData.forEach((pin: any) => {
+          if (pin.photos && Array.isArray(pin.photos)) {
+            pin.photos.sort((a: any, b: any) => (a.order_index || 0) - (b.order_index || 0))
+          }
+        })
+      }
+
       if (error) {
         console.error('Supabase error:', error)
         // Set empty pins array on error, but don't fail completely

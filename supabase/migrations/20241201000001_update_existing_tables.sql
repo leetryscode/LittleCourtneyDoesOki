@@ -128,4 +128,37 @@ CREATE POLICY "Pin authors can delete photos" ON photos
             WHERE pins.id = photos.pin_id 
             AND pins.author_id::text = auth.uid()::text
         )
+    );
+
+-- Create storage bucket for photos if it doesn't exist
+INSERT INTO storage.buckets (id, name, public) 
+VALUES ('photos', 'photos', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- Drop existing storage policies if they exist
+DROP POLICY IF EXISTS "Public read access" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated users can upload" ON storage.objects;
+DROP POLICY IF EXISTS "Users can update own photos" ON storage.objects;
+DROP POLICY IF EXISTS "Users can delete own photos" ON storage.objects;
+
+-- Storage policies for photos bucket
+CREATE POLICY "Public read access" ON storage.objects
+    FOR SELECT USING (bucket_id = 'photos');
+
+CREATE POLICY "Authenticated users can upload" ON storage.objects
+    FOR INSERT WITH CHECK (
+        bucket_id = 'photos' 
+        AND auth.uid() IS NOT NULL
+    );
+
+CREATE POLICY "Users can update own photos" ON storage.objects
+    FOR UPDATE USING (
+        bucket_id = 'photos' 
+        AND auth.uid() IS NOT NULL
+    );
+
+CREATE POLICY "Users can delete own photos" ON storage.objects
+    FOR DELETE USING (
+        bucket_id = 'photos' 
+        AND auth.uid() IS NOT NULL
     ); 

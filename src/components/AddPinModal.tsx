@@ -13,6 +13,12 @@ interface AddPinModalProps {
   onPinAdded: () => void
 }
 
+interface PhotoPreview {
+  file: File
+  preview: string
+  caption: string
+}
+
 export default function AddPinModal({ isOpen, onClose, lat, lng, onPinAdded }: AddPinModalProps) {
   const [formData, setFormData] = useState({
     title: '',
@@ -20,8 +26,51 @@ export default function AddPinModal({ isOpen, onClose, lat, lng, onPinAdded }: A
     category: '',
     rating: 5,
   })
+  const [photos, setPhotos] = useState<PhotoPreview[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    const newPhotos: PhotoPreview[] = files.map(file => ({
+      file,
+      preview: URL.createObjectURL(file),
+      caption: '',
+    }))
+    setPhotos(prev => [...prev, ...newPhotos])
+  }
+
+  const handleRemovePhoto = (index: number) => {
+    setPhotos(prev => {
+      const updated = prev.filter((_, i) => i !== index)
+      // Revoke object URL to prevent memory leak
+      URL.revokeObjectURL(prev[index].preview)
+      return updated
+    })
+  }
+
+  const handlePhotoCaptionChange = (index: number, caption: string) => {
+    setPhotos(prev => prev.map((photo, i) => 
+      i === index ? { ...photo, caption } : photo
+    ))
+  }
+
+  const uploadPhotoToStorage = async (file: File, pinId: string, index: number): Promise<string> => {
+    const fileExt = file.name.split('.').pop()
+    const fileName = `${pinId}/${Date.now()}-${index}.${fileExt}`
+    
+    const { error: uploadError } = await supabase.storage
+      .from('photos')
+      .upload(fileName, file)
+
+    if (uploadError) throw uploadError
+
+    const { data } = supabase.storage
+      .from('photos')
+      .getPublicUrl(fileName)
+
+    return data.publicUrl
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -32,7 +81,8 @@ export default function AddPinModal({ isOpen, onClose, lat, lng, onPinAdded }: A
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('User not authenticated')
 
-      const { error: insertError } = await supabase
+      // Create the pin first
+      const { data: pinData, error: insertError } = await supabase
         .from('pins')
         .insert({
           title: formData.title,
@@ -40,13 +90,42 @@ export default function AddPinModal({ isOpen, onClose, lat, lng, onPinAdded }: A
           category: formData.category || 'General',
           lat,
           lng,
-          created_by: user.id,
+          author_id: user.id,
+          created_by: user.id, // Keep both for backward compatibility
           rating: formData.rating,
         })
+        .select()
+        .single()
 
       if (insertError) throw insertError
+      if (!pinData) throw new Error('Failed to create pin')
+
+      // Upload photos and save to database
+      if (photos.length > 0) {
+        const photoPromises = photos.map(async (photo, index) => {
+          const url = await uploadPhotoToStorage(photo.file, pinData.id, index)
+          return {
+            pin_id: pinData.id,
+            url,
+            caption: photo.caption || null,
+            order_index: index,
+          }
+        })
+
+        const photoRecords = await Promise.all(photoPromises)
+
+        const { error: photosError } = await supabase
+          .from('photos')
+          .insert(photoRecords)
+
+        if (photosError) throw photosError
+      }
+
+      // Clean up object URLs
+      photos.forEach(photo => URL.revokeObjectURL(photo.preview))
 
       setFormData({ title: '', description: '', category: '', rating: 5 })
+      setPhotos([])
       onPinAdded()
       onClose()
     } catch (error: any) {
@@ -56,10 +135,17 @@ export default function AddPinModal({ isOpen, onClose, lat, lng, onPinAdded }: A
     }
   }
 
+  // Clean up object URLs when component unmounts or modal closes
+  const handleClose = () => {
+    photos.forEach(photo => URL.revokeObjectURL(photo.preview))
+    setPhotos([])
+    onClose()
+  }
+
   return (
     <BaseModal
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={handleClose}
       title="Add New Location"
       subtitle={<CoordinatesDisplay lat={lat} lng={lng} />}
     >
@@ -136,6 +222,55 @@ export default function AddPinModal({ isOpen, onClose, lat, lng, onPinAdded }: A
           </select>
         </div>
 
+        <div className="form-field">
+          <label htmlFor="photos" className="form-label">
+            Photos (Optional)
+          </label>
+          <input
+            id="photos"
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handlePhotoSelect}
+            className="form-input"
+            disabled={loading}
+            style={{ padding: '0.5rem' }}
+          />
+          {photos.length > 0 && (
+            <div className="mt-4 space-y-3">
+              {photos.map((photo, index) => (
+                <div key={index} className="relative border border-gray-300 rounded-lg p-3 bg-gray-50">
+                  <div className="flex gap-3">
+                    <img
+                      src={photo.preview}
+                      alt={`Preview ${index + 1}`}
+                      className="w-24 h-24 object-cover rounded"
+                    />
+                    <div className="flex-1">
+                      <input
+                        type="text"
+                        placeholder="Add caption (optional)"
+                        value={photo.caption}
+                        onChange={(e) => handlePhotoCaptionChange(index, e.target.value)}
+                        className="form-input mb-2"
+                        disabled={loading}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleRemovePhoto(index)}
+                        className="text-red-600 text-sm hover:text-red-800"
+                        disabled={loading}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         {error && (
           <div className="form-error">
             <p className="form-error-text">{error}</p>
@@ -145,7 +280,7 @@ export default function AddPinModal({ isOpen, onClose, lat, lng, onPinAdded }: A
         <div className="flex pt-2" style={{ gap: '2rem' }}>
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleClose}
             className="modal-button modal-button-secondary flex-1"
             disabled={loading}
           >

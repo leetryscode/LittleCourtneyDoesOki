@@ -25,7 +25,7 @@ export default function PinModal({
   currentUserId 
 }: PinModalProps) {
   // Check if current user is the author of this pin
-  const isAuthor = pin?.created_by === currentUserId && isAdmin
+  const isAuthor = (pin?.author_id === currentUserId || pin?.created_by === currentUserId) && isAdmin
   
   // Debug logging
   console.log('PinModal - pin:', pin)
@@ -82,22 +82,25 @@ export default function PinModal({
         {/* Photos */}
         {pin?.photos && pin.photos.length > 0 && (
           <div>
-            <h4 className="font-semibold text-gray-700 mb-3">Photos:</h4>
-            <div className="space-y-3">
-              {pin.photos.map((photo: any, index: number) => (
-                <div key={photo.id || index} className="relative">
-                  <img
-                    src={photo.url}
-                    alt={photo.caption || pin.title}
-                    className="w-full h-64 object-cover rounded-lg shadow-sm"
-                  />
-                  {photo.caption && (
-                    <p className="text-sm text-gray-500 mt-2 text-center">
-                      {photo.caption}
-                    </p>
-                  )}
-                </div>
-              ))}
+            <h4 className="font-semibold text-gray-700 mb-3">Photos ({pin.photos.length}):</h4>
+            <div className="space-y-4">
+              {[...pin.photos]
+                .sort((a: any, b: any) => (a.order_index || 0) - (b.order_index || 0))
+                .map((photo: any, index: number) => (
+                  <div key={photo.id || index} className="relative">
+                    <img
+                      src={photo.url}
+                      alt={photo.caption || `${pin.title} - Photo ${index + 1}`}
+                      className="w-full h-auto max-h-96 object-contain rounded-lg shadow-md"
+                      loading="lazy"
+                    />
+                    {photo.caption && (
+                      <p className="text-sm text-gray-500 mt-2 text-center italic">
+                        {photo.caption}
+                      </p>
+                    )}
+                  </div>
+                ))}
             </div>
           </div>
         )}
