@@ -6,6 +6,7 @@ import Header from '@/components/Header'
 import OkinawaMap from '@/components/OkinawaMap'
 import PinModal from '@/components/PinModal'
 import AddPinModal from '@/components/AddPinModal'
+import EditPinModal from '@/components/EditPinModal'
 import { PinWithPhotos, User } from '@/lib/supabase'
 
 export default function Home() {
@@ -14,6 +15,8 @@ export default function Home() {
   const [selectedPin, setSelectedPin] = useState<PinWithPhotos | null>(null)
   const [isPinModalOpen, setIsPinModalOpen] = useState(false)
   const [isAddPinModalOpen, setIsAddPinModalOpen] = useState(false)
+  const [isEditPinModalOpen, setIsEditPinModalOpen] = useState(false)
+  const [editingPin, setEditingPin] = useState<PinWithPhotos | null>(null)
   const [addPinLocation, setAddPinLocation] = useState({ lat: 0, lng: 0 })
 
   useEffect(() => {
@@ -131,9 +134,14 @@ export default function Home() {
   }
 
   const handleEditPin = (pin: PinWithPhotos) => {
-    // For now, just close the modal - we'll implement edit modal later
-    console.log('Edit pin:', pin.title)
-    // TODO: Open edit modal
+    setEditingPin(pin)
+    setIsPinModalOpen(false)
+    setIsEditPinModalOpen(true)
+  }
+
+  const handlePinUpdated = () => {
+    // Refresh the map to show updated pins
+    window.location.reload()
   }
 
   const handleDeletePin = async (pinId: string) => {
@@ -204,6 +212,18 @@ export default function Home() {
         lng={addPinLocation.lng}
         onPinAdded={handlePinAdded}
       />
+
+      {editingPin && (
+        <EditPinModal
+          isOpen={isEditPinModalOpen}
+          onClose={() => {
+            setIsEditPinModalOpen(false)
+            setEditingPin(null)
+          }}
+          pin={editingPin}
+          onPinUpdated={handlePinUpdated}
+        />
+      )}
     </div>
   )
 } 

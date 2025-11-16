@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet'
 import { Icon } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { PinWithPhotos } from '@/lib/supabase'
@@ -148,26 +148,7 @@ export default function OkinawaMapComponent({ onPinClick, onAddPin, isAdmin }: O
             eventHandlers={{
               click: () => onPinClick(pin),
             }}
-          >
-            <Popup>
-              <div className="text-center">
-                <h3 className="font-bold text-lg">{pin.title}</h3>
-                <p className="text-sm text-gray-600">{pin.description}</p>
-                <div className="flex justify-center mt-1">
-                  {[...Array(5)].map((_, i) => (
-                    <span
-                      key={i}
-                      className={`text-lg ${
-                        i < pin.rating ? 'text-yellow-400' : 'text-gray-300'
-                      }`}
-                    >
-                      ★
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </Popup>
-          </Marker>
+          />
         ))}
       </MapContainer>
     </div>

@@ -1,25 +1,28 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import BaseModal from './BaseModal'
 import CoordinatesDisplay from './CoordinatesDisplay'
+import { PinWithPhotos } from '@/lib/supabase'
 
-interface AddPinModalProps {
+interface EditPinModalProps {
   isOpen: boolean
   onClose: () => void
-  lat: number
-  lng: number
-  onPinAdded: () => void
+  pin: PinWithPhotos
+  onPinUpdated: () => void
 }
 
 interface PhotoPreview {
-  file: File
+  file?: File
   preview: string
   caption: string
+  id?: string
+  url?: string
+  isExisting?: boolean
 }
 
-export default function AddPinModal({ isOpen, onClose, lat, lng, onPinAdded }: AddPinModalProps) {
+export default function EditPinModal({ isOpen, onClose, pin, onPinUpdated }: EditPinModalProps) {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -30,22 +33,53 @@ export default function AddPinModal({ isOpen, onClose, lat, lng, onPinAdded }: A
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
+  // Initialize form data when pin changes
+  useEffect(() => {
+    if (pin) {
+      setFormData({
+        title: pin.title || '',
+        description: pin.description || '',
+        category: pin.category || '',
+        rating: pin.rating || 5,
+      })
+
+      // Load existing photos
+      if (pin.photos && pin.photos.length > 0) {
+        const existingPhotos: PhotoPreview[] = [...pin.photos]
+          .sort((a, b) => (a.order_index || 0) - (b.order_index || 0))
+          .map((photo) => ({
+            preview: photo.url,
+            caption: photo.caption || '',
+            id: photo.id,
+            url: photo.url,
+            isExisting: true,
+          }))
+        setPhotos(existingPhotos)
+      } else {
+        setPhotos([])
+      }
+    }
+  }, [pin])
+
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
     const newPhotos: PhotoPreview[] = files.map(file => ({
       file,
       preview: URL.createObjectURL(file),
       caption: '',
+      isExisting: false,
     }))
     setPhotos(prev => [...prev, ...newPhotos])
   }
 
   const handleRemovePhoto = (index: number) => {
     setPhotos(prev => {
-      const updated = prev.filter((_, i) => i !== index)
-      // Revoke object URL to prevent memory leak
-      URL.revokeObjectURL(prev[index].preview)
-      return updated
+      const photo = prev[index]
+      // Only revoke object URL for new photos (not existing ones)
+      if (photo.file && photo.preview && !photo.isExisting) {
+        URL.revokeObjectURL(photo.preview)
+      }
+      return prev.filter((_, i) => i !== index)
     })
   }
 
@@ -78,46 +112,84 @@ export default function AddPinModal({ isOpen, onClose, lat, lng, onPinAdded }: A
     setError('')
 
     try {
-      console.log('[AddPinModal] Start submit')
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('User not authenticated')
 
-      // Create the pin first
-      console.log('[AddPinModal] Inserting pin')
-      const { data: pinData, error: insertError } = await supabase
+      // Update the pin
+      const { error: updateError } = await supabase
         .from('pins')
-        .insert({
+        .update({
           title: formData.title,
           description: formData.description,
           category: formData.category || 'General',
-          lat,
-          lng,
-          author_id: user.id,
-          created_by: user.id, // Keep both for backward compatibility
           rating: formData.rating,
+          updated_at: new Date().toISOString(),
         })
-        .select()
-        .single()
+        .eq('id', pin.id)
 
-      if (insertError) throw insertError
-      if (!pinData) throw new Error('Failed to create pin')
+      if (updateError) throw updateError
 
-      // Upload photos and save to database
-      if (photos.length > 0) {
-        console.log('[AddPinModal] Uploading photos:', photos.length)
-        const photoPromises = photos.map(async (photo, index) => {
-          const url = await uploadPhotoToStorage(photo.file, pinData.id, index)
+      // Get existing photo IDs to track what to delete
+      const existingPhotoIds = pin.photos?.map(p => p.id) || []
+      const photosToKeep = photos.filter(p => p.isExisting && p.id)
+      const photosToDeleteIds = existingPhotoIds.filter(
+        id => !photosToKeep.some(p => p.id === id)
+      )
+
+      // Delete removed photos from database and storage
+      if (photosToDeleteIds.length > 0) {
+        // Get photo URLs before deleting for storage cleanup
+        const { data: photosToDelete } = await supabase
+          .from('photos')
+          .select('url')
+          .in('id', photosToDeleteIds)
+
+        // Delete from database
+        const { error: deleteError } = await supabase
+          .from('photos')
+          .delete()
+          .in('id', photosToDeleteIds)
+
+        if (deleteError) throw deleteError
+
+        // Optionally delete from storage (uncomment if you want to clean up storage)
+        // Note: This requires parsing the URL to get the file path
+        // if (photosToDelete) {
+        //   for (const photo of photosToDelete) {
+        //     // Extract path from URL and delete from storage
+        //   }
+        // }
+      }
+
+      // Update existing photos (captions and order)
+      for (let i = 0; i < photos.length; i++) {
+        const photo = photos[i]
+        if (photo.isExisting && photo.id) {
+          await supabase
+            .from('photos')
+            .update({
+              caption: photo.caption || null,
+              order_index: i,
+            })
+            .eq('id', photo.id)
+        }
+      }
+
+      // Upload new photos
+      const newPhotos = photos.filter(p => !p.isExisting && p.file)
+      if (newPhotos.length > 0) {
+        const photoPromises = newPhotos.map(async (photo, index) => {
+          const url = await uploadPhotoToStorage(photo.file!, pin.id, index)
           return {
-            pin_id: pinData.id,
+            pin_id: pin.id,
             url,
             caption: photo.caption || null,
-            order_index: index,
+            order_index: photos.indexOf(photo),
           }
         })
 
         const photoRecords = await Promise.all(photoPromises)
 
-        console.log('[AddPinModal] Inserting photo records')
         const { error: photosError } = await supabase
           .from('photos')
           .insert(photoRecords)
@@ -125,26 +197,29 @@ export default function AddPinModal({ isOpen, onClose, lat, lng, onPinAdded }: A
         if (photosError) throw photosError
       }
 
-      // Clean up object URLs
-      console.log('[AddPinModal] Cleaning up and closing')
-      photos.forEach(photo => URL.revokeObjectURL(photo.preview))
+      // Clean up object URLs for new photos
+      photos.forEach(photo => {
+        if (photo.file && photo.preview && !photo.isExisting) {
+          URL.revokeObjectURL(photo.preview)
+        }
+      })
 
-      setFormData({ title: '', description: '', category: '', rating: 5 })
-      setPhotos([])
-      onPinAdded()
+      onPinUpdated()
       onClose()
     } catch (error: any) {
-      console.error('[AddPinModal] Error:', error)
       setError(error.message)
     } finally {
-      console.log('[AddPinModal] Finished submit')
       setLoading(false)
     }
   }
 
   // Clean up object URLs when component unmounts or modal closes
   const handleClose = () => {
-    photos.forEach(photo => URL.revokeObjectURL(photo.preview))
+    photos.forEach(photo => {
+      if (photo.file && photo.preview && !photo.isExisting) {
+        URL.revokeObjectURL(photo.preview)
+      }
+    })
     setPhotos([])
     onClose()
   }
@@ -153,8 +228,8 @@ export default function AddPinModal({ isOpen, onClose, lat, lng, onPinAdded }: A
     <BaseModal
       isOpen={isOpen}
       onClose={handleClose}
-      title="Add New Location"
-      subtitle={<CoordinatesDisplay lat={lat} lng={lng} />}
+      title="Edit Location"
+      subtitle={<CoordinatesDisplay lat={pin?.lat || 0} lng={pin?.lng || 0} />}
     >
       <form onSubmit={handleSubmit} className="modal-form">
         <div className="form-field">
@@ -229,9 +304,11 @@ export default function AddPinModal({ isOpen, onClose, lat, lng, onPinAdded }: A
           </select>
         </div>
 
+        
+
         <div className="form-field">
           <label htmlFor="photos" className="form-label">
-            Photos (Optional)
+            Photos
           </label>
           <input
             id="photos"
@@ -300,10 +377,10 @@ export default function AddPinModal({ isOpen, onClose, lat, lng, onPinAdded }: A
             style={{ marginLeft: '2rem' }}
           >
             {loading && <div className="modal-spinner" />}
-            {loading ? 'Adding...' : 'Add Location'}
+            {loading ? 'Saving...' : 'Save Changes'}
           </button>
         </div>
       </form>
     </BaseModal>
   )
-} 
+}
