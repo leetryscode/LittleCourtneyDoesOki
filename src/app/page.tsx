@@ -7,6 +7,7 @@ import OkinawaMap from '@/components/OkinawaMap'
 import PinModal from '@/components/PinModal'
 import AddPinModal from '@/components/AddPinModal'
 import EditPinModal from '@/components/EditPinModal'
+import AuthModal from '@/components/AuthModal'
 import { PinWithPhotos, User } from '@/lib/supabase'
 
 export default function Home() {
@@ -18,6 +19,10 @@ export default function Home() {
   const [isEditPinModalOpen, setIsEditPinModalOpen] = useState(false)
   const [editingPin, setEditingPin] = useState<PinWithPhotos | null>(null)
   const [addPinLocation, setAddPinLocation] = useState({ lat: 0, lng: 0 })
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
+  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login')
+  const [authLoading, setAuthLoading] = useState(false)
+  const [authError, setAuthError] = useState('')
 
   useEffect(() => {
     // Check authentication state
@@ -113,6 +118,54 @@ export default function Home() {
     setIsAdmin(false)
   }
 
+  const handleAuth = async (data: { email: string; password: string; name?: string }) => {
+    setAuthLoading(true)
+    setAuthError('')
+
+    try {
+      if (authMode === 'login') {
+        const { error } = await supabase.auth.signInWithPassword({
+          email: data.email,
+          password: data.password,
+        })
+        if (error) throw error
+      } else {
+        const { data: authData, error } = await supabase.auth.signUp({
+          email: data.email,
+          password: data.password,
+        })
+        if (error) throw error
+        
+        if (authData.user) {
+          const { error: profileError } = await supabase
+            .from('users')
+            .insert({
+              id: authData.user.id,
+              email: data.email,
+              name: data.name || 'User',
+            })
+          
+          if (profileError) {
+            console.error('Error creating user profile:', profileError)
+          }
+        }
+      }
+      
+      setIsAuthModalOpen(false)
+      window.location.reload()
+    } catch (error: any) {
+      setAuthError(error.message)
+    } finally {
+      setAuthLoading(false)
+    }
+  }
+
+  const openAuthModal = (mode: 'login' | 'signup') => {
+    setAuthMode(mode)
+    setIsAuthModalOpen(true)
+    setAuthError('')
+  }
+
   const handlePinClick = (pin: PinWithPhotos) => {
     setSelectedPin(pin)
     setIsPinModalOpen(true)
@@ -174,6 +227,38 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gray-50 relative">
+      {/* Floating Authentication Buttons - Top Right Position */}
+      <div className="fixed z-[100] pointer-events-none" style={{ right: '1.5rem', top: '1.5rem', left: 'auto' }}>
+        <div className="flex flex-row space-x-3 pointer-events-auto">
+          {user ? (
+            <button
+              onClick={handleLogout}
+              className="glass-button"
+              style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}
+            >
+              Log out
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={() => openAuthModal('login')}
+                className="glass-button"
+                style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}
+              >
+                Log in
+              </button>
+              <button
+                onClick={() => openAuthModal('signup')}
+                className="glass-button"
+                style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}
+              >
+                Sign up
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
       <Header
         isAuthenticated={!!user}
         isAdmin={isAdmin}
@@ -225,6 +310,18 @@ export default function Home() {
           onDeletePin={handleDeletePin}
         />
       )}
+
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => {
+          setIsAuthModalOpen(false)
+          setAuthError('')
+        }}
+        mode={authMode}
+        onSubmit={handleAuth}
+        loading={authLoading}
+        error={authError}
+      />
     </div>
   )
 } 

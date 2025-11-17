@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet'
 import { Icon } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { PinWithPhotos } from '@/lib/supabase'
@@ -15,32 +15,17 @@ Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 })
 
-// Custom zoom control component - REMOVED
-// function CustomZoomControl() {
-//   const map = useMap()
-//   
-//   const zoomIn = () => map.zoomIn()
-//   const zoomOut = () => map.zoomOut()
-//   
-//   return (
-//     <div className="absolute top-20 right-4 z-[1000] bg-white rounded-lg shadow-lg border border-gray-200">
-//       <button
-//         onClick={zoomIn}
-//         className="block w-10 h-10 text-gray-700 hover:bg-gray-100 border-b border-gray-200 rounded-t-lg transition-colors duration-200"
-//         title="Zoom in"
-//       >
-//         +
-//       </button>
-//       <button
-//         onClick={zoomOut}
-//         className="block w-10 h-10 text-gray-700 hover:bg-gray-100 rounded-b-lg transition-colors duration-200"
-//         title="Zoom out"
-//       >
-//         −
-//       </button>
-//     </div>
-//   )
-// }
+const CATEGORY_FILTERS = [
+  { value: null, label: 'All', icon: '📍' },
+  { value: 'Beach', label: 'Beaches', icon: '🏖️' },
+  { value: 'Restaurant', label: 'Restaurants', icon: '🍽️' },
+  { value: 'Activity', label: 'Activities', icon: '🎯' },
+  { value: 'View', label: 'Views', icon: '🌅' },
+  { value: 'Historical', label: 'Historical', icon: '🏛️' },
+  { value: 'General', label: 'General', icon: '📍' },
+] as const
+
+type CategoryValue = (typeof CATEGORY_FILTERS)[number]['value']
 
 interface MapClickHandlerProps {
   onMapClick: (lat: number, lng: number) => void
@@ -67,6 +52,7 @@ interface OkinawaMapComponentProps {
 export default function OkinawaMapComponent({ onPinClick, onAddPin, isAdmin }: OkinawaMapComponentProps) {
   const [pins, setPins] = useState<PinWithPhotos[]>([])
   const [loading, setLoading] = useState(true)
+  const [selectedCategory, setSelectedCategory] = useState<CategoryValue | null>(null)
 
   useEffect(() => {
     fetchPins()
@@ -119,7 +105,24 @@ export default function OkinawaMapComponent({ onPinClick, onAddPin, isAdmin }: O
     )
   }
 
-    return (
+  const visiblePins = selectedCategory
+    ? pins.filter((pin) => {
+        if (!pin.category) return false
+        return pin.category.trim().toLowerCase() === selectedCategory.toLowerCase()
+      })
+    : pins
+
+  const handleCategorySelect = (category: CategoryValue) => {
+    if (category === null) {
+      setSelectedCategory(null)
+    } else {
+      setSelectedCategory((current) =>
+        current?.toLowerCase() === category.toLowerCase() ? null : category
+      )
+    }
+  }
+
+  return (
     <div className="relative w-full h-screen">
       <MapContainer
         center={[26.65, 127.9764]}
@@ -128,7 +131,6 @@ export default function OkinawaMapComponent({ onPinClick, onAddPin, isAdmin }: O
         zoomControl={false}
         scrollWheelZoom={true}
       >
-        {/* Pure satellite imagery - no obstructing tile layers */}
         <TileLayer
           url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
           attribution='&copy; <a href="https://www.esri.com/">Esri</a>'
@@ -136,12 +138,8 @@ export default function OkinawaMapComponent({ onPinClick, onAddPin, isAdmin }: O
         />
 
         <MapClickHandler onMapClick={handleMapClick} isAdmin={isAdmin} />
-        
-        {/* Custom zoom control removed */}
-        
-        {/* All custom city labels removed for clean map */}
 
-        {pins.map((pin) => (
+        {visiblePins.map((pin) => (
           <Marker
             key={pin.id}
             position={[pin.lat, pin.lng]}
@@ -151,6 +149,45 @@ export default function OkinawaMapComponent({ onPinClick, onAddPin, isAdmin }: O
           />
         ))}
       </MapContainer>
+
+      <CategoryFilterBar
+        selectedCategory={selectedCategory}
+        onSelect={handleCategorySelect}
+      />
     </div>
   )
-} 
+}
+
+interface CategoryFilterBarProps {
+  selectedCategory: CategoryValue | null
+  onSelect: (category: CategoryValue) => void
+}
+
+function CategoryFilterBar({ selectedCategory, onSelect }: CategoryFilterBarProps) {
+  return (
+    <div className="pointer-events-none fixed z-[60] flex justify-center" style={{ bottom: '1.5rem', left: '1.5rem', right: '1.5rem' }}>
+      <div className="pointer-events-auto flex w-full max-w-4xl flex-wrap justify-center gap-3">
+        {CATEGORY_FILTERS.map((category) => {
+          const isActive =
+            category.value === null
+              ? selectedCategory === null
+              : selectedCategory?.toLowerCase() === category.value.toLowerCase()
+
+          return (
+            <button
+              key={category.value ?? 'all'}
+              type="button"
+              aria-pressed={isActive}
+              onClick={() => onSelect(category.value)}
+              className={`glass-button flex items-center justify-center gap-2 ${isActive ? 'glass-button--active' : ''}`}
+              style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}
+            >
+              <span className="text-base">{category.icon}</span>
+              <span className="whitespace-nowrap">{category.label}</span>
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}

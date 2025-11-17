@@ -250,110 +250,51 @@ header p {
     0 2px 4px rgba(0, 0, 0, 0.6);
 } 
 
-/* Ensure authentication buttons are at the very bottom */
-.fixed.bottom-0 {
-  bottom: 0 !important;
-  position: fixed !important;
-}
-
-/* Override any conflicting positioning */
-[style*="bottom: 0px"] {
-  bottom: 0 !important;
-} 
-
-/* Override Tailwind colors with higher specificity */
-* {
-  color: white !important;
-}
-
-/* Specific overrides for common elements */
-p, span, div, button, input, textarea, label, h1, h2, h3, h4, h5, h6 {
-  color: white !important;
-}
-
-/* Override Tailwind text color utilities */
-.text-black, .text-gray-900, .text-gray-800, .text-gray-700, .text-gray-600, .text-gray-500, .text-gray-400, .text-gray-300, .text-gray-200, .text-gray-100 {
-  color: white !important;
-}
-
-/* Ensure buttons have white text */
-button, .btn, [class*="bg-"] {
-  color: white !important;
-}
-
-/* Override any inline styles */
-[style*="color"] {
-  color: white !important;
-} 
-
-/* Ensure authentication buttons have white text */
-.fixed.bottom-0 button,
-.fixed.bottom-0 span,
-.fixed.bottom-0 * {
-  color: white !important;
-}
-
-/* Override any Tailwind text color utilities on auth buttons */
-.fixed.bottom-0 .text-white,
-.fixed.bottom-0 .text-black,
-.fixed.bottom-0 .text-gray-900 {
-  color: white !important;
-} 
-
-/* Force authentication buttons to be transparent with white outlines */
-.fixed.bottom-4 button,
-.fixed.bottom-4 .bg-transparent,
-.fixed.bottom-4 .border-white {
-  background-color: transparent !important;
-  border: 2px solid white !important;
-  color: white !important;
-}
-
-/* Override any black backgrounds specifically */
-.fixed.bottom-4 button[class*="bg-"],
-.fixed.bottom-4 button.bg-black,
-.fixed.bottom-4 button.bg-gray-900 {
-  background-color: transparent !important;
-}
-
-/* Ensure proper spacing between buttons */
-.fixed.bottom-4 .space-x-4 > * + * {
-  margin-left: 1rem !important;
-} 
-
-/* Target the unique auth buttons container */
-.auth-buttons-container {
-  bottom: 1rem !important;
-  left: 50% !important;
-  transform: translateX(-50%) !important;
-  position: fixed !important;
-  z-index: 50 !important;
-  width: auto !important;
-  display: flex !important;
-  justify-content: center !important;
-  align-items: center !important;
-}
-
-.auth-buttons-container button {
-  background-color: transparent !important;
-  border: 2px solid white !important;
-  color: white !important;
-}
-
-/* Ensure proper spacing between buttons */
-.auth-buttons-container .space-x-4 > * + * {
-  margin-left: 1rem !important;
-}
-
-/* Center the button row horizontally */
-.auth-buttons-container .flex {
-  justify-content: center !important;
-  align-items: center !important;
-} 
 
 /* ===========================================
    MODAL THEME SYSTEM
    =========================================== */
+
+/* Shared Glass Button Styles */
+.glass-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.85rem 1.75rem;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  border-radius: 1rem;
+  background: rgba(6, 182, 212, 0.08);
+  color: #ffffff;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 10px 30px rgba(6, 182, 212, 0.35);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.glass-button:hover {
+  background: rgba(255, 255, 255, 0.18);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 15px 35px rgba(6, 182, 212, 0.45);
+}
+
+.glass-button:active {
+  transform: translateY(0) scale(0.98);
+  box-shadow: 0 8px 20px rgba(6, 182, 212, 0.35);
+}
+
+.glass-button--active {
+  background: rgba(255, 255, 255, 0.28);
+  border-color: #ffffff;
+  box-shadow: 0 20px 45px rgba(6, 182, 212, 0.55);
+}
+
+.glass-button-icon {
+  font-size: 1.25rem;
+  line-height: 1;
+}
 
 /* Base Modal Overlay */
 .modal-overlay {

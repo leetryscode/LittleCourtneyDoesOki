@@ -18,6 +18,7 @@ export interface Pin {
   id: string
   title: string
   description: string
+  category?: string | null
   lat: number
   lng: number
   author_id: string

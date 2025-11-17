@@ -120,37 +120,6 @@ export default function Header({ isAuthenticated, isAdmin, onLogout, onAddPin }:
         </div>
       </header>
 
-      {/* Floating Authentication Buttons - Bottom Position */}
-      <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 auth-buttons-container">
-        <div className="flex flex-row space-x-4">
-          {isAuthenticated ? (
-            <button
-              onClick={onLogout}
-              className="px-4 py-2 bg-transparent border border-white/30 text-white/80 text-sm font-medium rounded-lg hover:bg-white/10 hover:border-white/50 hover:text-white transition-all duration-200 backdrop-blur-sm"
-            >
-              Log out
-            </button>
-          ) : (
-            <>
-              <button
-                onClick={() => openAuthModal('login')}
-                className="px-6 py-3 bg-transparent border-2 border-white text-white font-semibold rounded-xl hover:bg-white/20 transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-lg backdrop-blur-sm"
-                style={{ backgroundColor: 'transparent', border: '2px solid white', color: 'white' }}
-              >
-                <span className="text-white font-semibold">Log in</span>
-              </button>
-              <button
-                onClick={() => openAuthModal('signup')}
-                className="px-6 py-3 bg-transparent border-2 border-white text-white font-semibold rounded-xl hover:bg-white/20 transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-lg backdrop-blur-sm"
-                style={{ backgroundColor: 'transparent', border: '2px solid white', color: 'white' }}
-              >
-                <span className="text-white font-semibold">Sign up</span>
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-
       {/* Authentication Modal */}
       <AuthModal
         isOpen={isAuthModalOpen}
