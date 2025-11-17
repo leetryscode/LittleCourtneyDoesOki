@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import BaseModal from './BaseModal'
 import CoordinatesDisplay from './CoordinatesDisplay'
 import { PinWithPhotos } from '@/lib/supabase'
+import ImageCropModal from './ImageCropModal'
 
 interface EditPinModalProps {
   isOpen: boolean
@@ -31,6 +32,8 @@ export default function EditPinModal({ isOpen, onClose, pin, onPinUpdated }: Edi
   const [photos, setPhotos] = useState<PhotoPreview[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [cropModalOpen, setCropModalOpen] = useState(false)
+  const [photoToCrop, setPhotoToCrop] = useState<{ file: File; preview: string; index?: number } | null>(null)
 
   // Initialize form data when pin changes
   useEffect(() => {
@@ -61,12 +64,81 @@ export default function EditPinModal({ isOpen, onClose, pin, onPinUpdated }: Edi
 
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
-    const newPhotos: PhotoPreview[] = files.map(file => ({
-      file,
-      preview: URL.createObjectURL(file),
-      isExisting: false,
-    }))
-    setPhotos(prev => [...prev, ...newPhotos])
+    if (files.length > 0) {
+      // Open crop modal for the first file
+      const file = files[0]
+      const preview = URL.createObjectURL(file)
+      setPhotoToCrop({ file, preview })
+      setCropModalOpen(true)
+      // Clear the input so the same file can be selected again
+      e.target.value = ''
+    }
+  }
+
+  const handleCropComplete = async (croppedImageBlob: Blob) => {
+    if (!photoToCrop) return
+
+    // Create a File from the Blob
+    const croppedFile = new File([croppedImageBlob], photoToCrop.file.name, {
+      type: 'image/jpeg',
+      lastModified: Date.now(),
+    })
+
+    // Create preview URL
+    const preview = URL.createObjectURL(croppedFile)
+
+    // If there's an index, replace the photo at that index, otherwise add new
+    if (photoToCrop.index !== undefined) {
+      setPhotos(prev => {
+        const updated = [...prev]
+        const photo = prev[photoToCrop.index!]
+        // Only revoke old preview URL if it was a new photo (not existing)
+        if (photo.file && photo.preview && !photo.isExisting) {
+          URL.revokeObjectURL(photo.preview)
+        }
+        updated[photoToCrop.index!] = {
+          file: croppedFile,
+          preview,
+          isExisting: false,
+        }
+        return updated
+      })
+    } else {
+      setPhotos(prev => [...prev, { file: croppedFile, preview, isExisting: false }])
+    }
+
+    // Clean up
+    URL.revokeObjectURL(photoToCrop.preview)
+    setPhotoToCrop(null)
+    setCropModalOpen(false)
+  }
+
+  const handleEditPhoto = (index: number) => {
+    const photo = photos[index]
+    // For existing photos, we need to fetch the image to crop it
+    if (photo.isExisting && photo.url) {
+      // Fetch the image and convert to blob
+      fetch(photo.url)
+        .then(res => res.blob())
+        .then(blob => {
+          const file = new File([blob], `photo-${index}.jpg`, { type: 'image/jpeg' })
+          setPhotoToCrop({ file, preview: photo.url || photo.preview, index })
+          setCropModalOpen(true)
+        })
+        .catch(err => {
+          console.error('Error fetching image for crop:', err)
+          // Fallback to using preview URL directly
+          if (photo.preview) {
+            const file = new File([], `photo-${index}.jpg`, { type: 'image/jpeg' })
+            setPhotoToCrop({ file, preview: photo.preview, index })
+            setCropModalOpen(true)
+          }
+        })
+    } else if (photo.file) {
+      // For new photos, use the existing file
+      setPhotoToCrop({ file: photo.file, preview: photo.preview, index })
+      setCropModalOpen(true)
+    }
   }
 
   const handleRemovePhoto = (index: number) => {
@@ -215,12 +287,13 @@ export default function EditPinModal({ isOpen, onClose, pin, onPinUpdated }: Edi
   }
 
   return (
-    <BaseModal
-      isOpen={isOpen}
-      onClose={handleClose}
-      title="Edit Location"
-      subtitle={<CoordinatesDisplay lat={pin?.lat || 0} lng={pin?.lng || 0} />}
-    >
+    <>
+      <BaseModal
+        isOpen={isOpen}
+        onClose={handleClose}
+        title="Edit Location"
+        subtitle={<CoordinatesDisplay lat={pin?.lat || 0} lng={pin?.lng || 0} />}
+      >
       <form onSubmit={handleSubmit} className="modal-form">
         <div className="form-field">
           <label htmlFor="title" className="form-label">
@@ -329,7 +402,21 @@ export default function EditPinModal({ isOpen, onClose, pin, onPinUpdated }: Edi
                       className="w-full h-full object-cover"
                     />
                   </div>
-                  <div className="mt-2 mb-4 flex justify-end">
+                  <div className="mt-2 mb-4 flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleEditPhoto(index)}
+                      className="modal-button modal-button-secondary"
+                      style={{ 
+                        marginTop: '0',
+                        padding: '0.375rem 1rem',
+                        fontSize: '0.875rem',
+                        minHeight: 'auto'
+                      }}
+                      disabled={loading}
+                    >
+                      Crop/Edit
+                    </button>
                     <button
                       type="button"
                       onClick={() => handleRemovePhoto(index)}
@@ -378,5 +465,23 @@ export default function EditPinModal({ isOpen, onClose, pin, onPinUpdated }: Edi
         </div>
       </form>
     </BaseModal>
+
+    {photoToCrop && (
+      <ImageCropModal
+        isOpen={cropModalOpen}
+        onClose={() => {
+          setCropModalOpen(false)
+          if (photoToCrop && photoToCrop.index === undefined) {
+            // If it was a new photo (not editing existing), clean up the preview
+            URL.revokeObjectURL(photoToCrop.preview)
+          }
+          setPhotoToCrop(null)
+        }}
+        imageSrc={photoToCrop.preview}
+        aspectRatio={4 / 3}
+        onCropComplete={handleCropComplete}
+      />
+    )}
+    </>
   )
 }

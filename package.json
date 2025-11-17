@@ -16,6 +16,7 @@
     "next": "15.5.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
+    "react-easy-crop": "^5.5.3",
     "react-leaflet": "^5.0.0",
     "react-modal": "^3.16.3",
     "swiper": "^11.2.10",

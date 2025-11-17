@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import BaseModal from './BaseModal'
 import CoordinatesDisplay from './CoordinatesDisplay'
+import ImageCropModal from './ImageCropModal'
 
 interface AddPinModalProps {
   isOpen: boolean
@@ -28,14 +29,60 @@ export default function AddPinModal({ isOpen, onClose, lat, lng, onPinAdded }: A
   const [photos, setPhotos] = useState<PhotoPreview[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [cropModalOpen, setCropModalOpen] = useState(false)
+  const [photoToCrop, setPhotoToCrop] = useState<{ file: File; preview: string; index?: number } | null>(null)
 
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
-    const newPhotos: PhotoPreview[] = files.map(file => ({
-      file,
-      preview: URL.createObjectURL(file),
-    }))
-    setPhotos(prev => [...prev, ...newPhotos])
+    if (files.length > 0) {
+      // Open crop modal for the first file
+      const file = files[0]
+      const preview = URL.createObjectURL(file)
+      setPhotoToCrop({ file, preview })
+      setCropModalOpen(true)
+      // Clear the input so the same file can be selected again
+      e.target.value = ''
+    }
+  }
+
+  const handleCropComplete = async (croppedImageBlob: Blob) => {
+    if (!photoToCrop) return
+
+    // Create a File from the Blob
+    const croppedFile = new File([croppedImageBlob], photoToCrop.file.name, {
+      type: 'image/jpeg',
+      lastModified: Date.now(),
+    })
+
+    // Create preview URL
+    const preview = URL.createObjectURL(croppedFile)
+
+    // If there's an index, replace the photo at that index, otherwise add new
+    if (photoToCrop.index !== undefined) {
+      setPhotos(prev => {
+        const updated = [...prev]
+        // Revoke old preview URL
+        URL.revokeObjectURL(prev[photoToCrop.index!].preview)
+        updated[photoToCrop.index!] = {
+          file: croppedFile,
+          preview,
+        }
+        return updated
+      })
+    } else {
+      setPhotos(prev => [...prev, { file: croppedFile, preview }])
+    }
+
+    // Clean up
+    URL.revokeObjectURL(photoToCrop.preview)
+    setPhotoToCrop(null)
+    setCropModalOpen(false)
+  }
+
+  const handleEditPhoto = (index: number) => {
+    const photo = photos[index]
+    setPhotoToCrop({ file: photo.file, preview: photo.preview, index })
+    setCropModalOpen(true)
   }
 
   const handleRemovePhoto = (index: number) => {
@@ -184,12 +231,13 @@ export default function AddPinModal({ isOpen, onClose, lat, lng, onPinAdded }: A
   }
 
   return (
-    <BaseModal
-      isOpen={isOpen}
-      onClose={handleClose}
-      title="Add New Location"
-      subtitle={<CoordinatesDisplay lat={lat} lng={lng} />}
-    >
+    <>
+      <BaseModal
+        isOpen={isOpen}
+        onClose={handleClose}
+        title="Add New Location"
+        subtitle={<CoordinatesDisplay lat={lat} lng={lng} />}
+      >
       <form onSubmit={handleSubmit} className="modal-form">
         <div className="form-field">
           <label htmlFor="title" className="form-label">
@@ -298,7 +346,21 @@ export default function AddPinModal({ isOpen, onClose, lat, lng, onPinAdded }: A
                       className="w-full h-full object-cover"
                     />
                   </div>
-                  <div className="mt-2 mb-4 flex justify-end">
+                  <div className="mt-2 mb-4 flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleEditPhoto(index)}
+                      className="modal-button modal-button-secondary"
+                      style={{ 
+                        marginTop: '0',
+                        padding: '0.375rem 1rem',
+                        fontSize: '0.875rem',
+                        minHeight: 'auto'
+                      }}
+                      disabled={loading}
+                    >
+                      Crop/Edit
+                    </button>
                     <button
                       type="button"
                       onClick={() => handleRemovePhoto(index)}
@@ -348,5 +410,23 @@ export default function AddPinModal({ isOpen, onClose, lat, lng, onPinAdded }: A
         </div>
       </form>
     </BaseModal>
+
+    {photoToCrop && (
+      <ImageCropModal
+        isOpen={cropModalOpen}
+        onClose={() => {
+          setCropModalOpen(false)
+          if (photoToCrop && photoToCrop.index === undefined) {
+            // If it was a new photo (not editing existing), clean up the preview
+            URL.revokeObjectURL(photoToCrop.preview)
+          }
+          setPhotoToCrop(null)
+        }}
+        imageSrc={photoToCrop.preview}
+        aspectRatio={4 / 3}
+        onCropComplete={handleCropComplete}
+      />
+    )}
+    </>
   )
 } 
