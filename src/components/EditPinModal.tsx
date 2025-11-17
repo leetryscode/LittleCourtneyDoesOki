@@ -12,6 +12,7 @@ interface EditPinModalProps {
   onClose: () => void
   pin: PinWithPhotos
   onPinUpdated: () => void
+  onDeletePin?: (pinId: string) => void
 }
 
 interface PhotoPreview {
@@ -22,7 +23,7 @@ interface PhotoPreview {
   isExisting?: boolean
 }
 
-export default function EditPinModal({ isOpen, onClose, pin, onPinUpdated }: EditPinModalProps) {
+export default function EditPinModal({ isOpen, onClose, pin, onPinUpdated, onDeletePin }: EditPinModalProps) {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -453,6 +454,26 @@ export default function EditPinModal({ isOpen, onClose, pin, onPinUpdated }: Edi
           >
             Cancel
           </button>
+          {onDeletePin && (
+            <button
+              type="button"
+              onClick={() => {
+                if (confirm(`Are you sure you want to delete "${pin?.title}"?`)) {
+                  onDeletePin(pin.id)
+                  handleClose()
+                }
+              }}
+              className="modal-button modal-button-secondary flex-1"
+              style={{ 
+                background: 'rgba(239, 68, 68, 0.1)', 
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                color: '#fca5a5',
+              }}
+              disabled={loading}
+            >
+              Delete
+            </button>
+          )}
           <button
             type="submit"
             disabled={loading}

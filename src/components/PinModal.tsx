@@ -113,26 +113,6 @@ export default function PinModal({
             </button>
           )}
           
-          {isAuthor && onDeletePin && (
-            <button
-              onClick={() => {
-                if (confirm(`Are you sure you want to delete "${pin?.title}"?`)) {
-                  onDeletePin(pin.id)
-                }
-              }}
-              className="modal-button modal-button-secondary"
-              style={{ 
-                background: 'rgba(239, 68, 68, 0.1)', 
-                border: '1px solid rgba(239, 68, 68, 0.3)',
-                color: '#fca5a5',
-                marginLeft: '0',
-                marginRight: '0'
-              }}
-            >
-              Delete
-            </button>
-          )}
-          
           <button
             onClick={onClose}
             className="modal-button modal-button-secondary"

@@ -222,6 +222,7 @@ export default function Home() {
           }}
           pin={editingPin}
           onPinUpdated={handlePinUpdated}
+          onDeletePin={handleDeletePin}
         />
       )}
     </div>

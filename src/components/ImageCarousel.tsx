@@ -47,13 +47,6 @@ export default function ImageCarousel({ images }: ImageCarouselProps) {
     setCurrentIndex(index)
   }
 
-  const goToPrevious = () => {
-    setCurrentIndex(currentIndex === 0 ? images.length - 1 : currentIndex - 1)
-  }
-
-  const goToNext = () => {
-    setCurrentIndex(currentIndex === images.length - 1 ? 0 : currentIndex + 1)
-  }
 
   // Keyboard navigation
   useEffect(() => {
@@ -113,73 +106,28 @@ export default function ImageCarousel({ images }: ImageCarouselProps) {
           ))}
         </div>
 
-        {/* Navigation arrows */}
-        {images.length > 1 && (
-          <>
-            <button
-              onClick={goToPrevious}
-              className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-all z-10"
-              aria-label="Previous image"
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
-            </button>
-            <button
-              onClick={goToNext}
-              className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-all z-10"
-              aria-label="Next image"
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 5l7 7-7 7"
-                />
-              </svg>
-            </button>
-          </>
-        )}
-
-        {/* Image counter */}
-        {images.length > 1 && (
-          <div className="absolute top-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded z-10">
-            {currentIndex + 1} / {images.length}
-          </div>
-        )}
       </div>
 
-      {/* Dots indicator */}
+      {/* Progress bar indicator */}
       {images.length > 1 && (
-        <div className="flex justify-center gap-2 mt-3">
-          {images.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => goToSlide(index)}
-              className={`transition-all rounded-full ${
-                index === currentIndex
-                  ? 'bg-blue-500 w-8 h-2'
-                  : 'bg-gray-300 w-2 h-2 hover:bg-gray-400'
-              }`}
-              aria-label={`Go to image ${index + 1}`}
+        <div className="mt-4" style={{ padding: '0.5rem 0' }}>
+          <div 
+            className="w-full rounded-full overflow-hidden"
+            style={{ 
+              height: '6px',
+              backgroundColor: 'rgba(75, 85, 99, 0.5)',
+              boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.3)'
+            }}
+          >
+            <div
+              className="h-full rounded-full transition-all duration-300 ease-out"
+              style={{ 
+                width: `${((currentIndex + 1) / images.length) * 100}%`,
+                background: 'linear-gradient(to right, #22d3ee, #14b8a6)',
+                boxShadow: '0 0 10px rgba(34, 211, 238, 0.6)'
+              }}
             />
-          ))}
+          </div>
         </div>
       )}
     </div>
