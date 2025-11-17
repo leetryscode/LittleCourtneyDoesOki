@@ -16,7 +16,6 @@ interface AddPinModalProps {
 interface PhotoPreview {
   file: File
   preview: string
-  caption: string
 }
 
 export default function AddPinModal({ isOpen, onClose, lat, lng, onPinAdded }: AddPinModalProps) {
@@ -35,7 +34,6 @@ export default function AddPinModal({ isOpen, onClose, lat, lng, onPinAdded }: A
     const newPhotos: PhotoPreview[] = files.map(file => ({
       file,
       preview: URL.createObjectURL(file),
-      caption: '',
     }))
     setPhotos(prev => [...prev, ...newPhotos])
   }
@@ -49,27 +47,48 @@ export default function AddPinModal({ isOpen, onClose, lat, lng, onPinAdded }: A
     })
   }
 
-  const handlePhotoCaptionChange = (index: number, caption: string) => {
-    setPhotos(prev => prev.map((photo, i) => 
-      i === index ? { ...photo, caption } : photo
-    ))
-  }
-
   const uploadPhotoToStorage = async (file: File, pinId: string, index: number): Promise<string> => {
     const fileExt = file.name.split('.').pop()
-    const fileName = `${pinId}/${Date.now()}-${index}.${fileExt}`
+    const fileName = `${pinId}/${Date.now()}-${index}-${Math.random().toString(36).substring(7)}.${fileExt}`
     
-    const { error: uploadError } = await supabase.storage
-      .from('photos')
-      .upload(fileName, file)
+    console.log(`[AddPinModal] Uploading photo ${index + 1}: ${fileName} (${(file.size / 1024 / 1024).toFixed(2)} MB)`)
+    
+    // Add timeout to prevent hanging
+    let timeoutId: NodeJS.Timeout | null = null
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(() => {
+        reject(new Error(`Photo upload timeout after 30 seconds`))
+      }, 30000)
+    })
 
-    if (uploadError) throw uploadError
+    try {
+      const uploadPromise = supabase.storage
+        .from('photos')
+        .upload(fileName, file)
 
-    const { data } = supabase.storage
-      .from('photos')
-      .getPublicUrl(fileName)
+      const result = await Promise.race([uploadPromise, timeoutPromise])
+      
+      // Clear timeout if upload succeeded
+      if (timeoutId) clearTimeout(timeoutId)
 
-    return data.publicUrl
+      const { error: uploadError } = result as any
+
+      if (uploadError) {
+        console.error(`[AddPinModal] Upload error for photo ${index + 1}:`, uploadError)
+        throw new Error(`Failed to upload photo ${index + 1}: ${uploadError.message}`)
+      }
+
+      const { data } = supabase.storage
+        .from('photos')
+        .getPublicUrl(fileName)
+
+      console.log(`[AddPinModal] Photo ${index + 1} uploaded successfully`)
+      return data.publicUrl
+    } catch (error: any) {
+      // Clear timeout on error
+      if (timeoutId) clearTimeout(timeoutId)
+      throw error
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -105,24 +124,39 @@ export default function AddPinModal({ isOpen, onClose, lat, lng, onPinAdded }: A
       // Upload photos and save to database
       if (photos.length > 0) {
         console.log('[AddPinModal] Uploading photos:', photos.length)
-        const photoPromises = photos.map(async (photo, index) => {
-          const url = await uploadPhotoToStorage(photo.file, pinData.id, index)
-          return {
-            pin_id: pinData.id,
-            url,
-            caption: photo.caption || null,
-            order_index: index,
+        
+        // Upload photos with individual error handling
+        const photoRecords = []
+        for (let i = 0; i < photos.length; i++) {
+          try {
+            console.log(`[AddPinModal] Starting upload for photo ${i + 1}/${photos.length}`)
+            const url = await uploadPhotoToStorage(photos[i].file, pinData.id, i)
+            photoRecords.push({
+              pin_id: pinData.id,
+              url,
+              caption: null,
+              order_index: i,
+            })
+            console.log(`[AddPinModal] Photo ${i + 1} processed successfully`)
+          } catch (photoError: any) {
+            console.error(`[AddPinModal] Failed to upload photo ${i + 1}:`, photoError)
+            // Continue with other photos, but throw error at the end
+            throw new Error(`Failed to upload photo ${i + 1} (${photos[i].file.name}): ${photoError.message}`)
           }
-        })
+        }
 
-        const photoRecords = await Promise.all(photoPromises)
+        if (photoRecords.length > 0) {
+          console.log('[AddPinModal] Inserting photo records:', photoRecords.length)
+          const { error: photosError } = await supabase
+            .from('photos')
+            .insert(photoRecords)
 
-        console.log('[AddPinModal] Inserting photo records')
-        const { error: photosError } = await supabase
-          .from('photos')
-          .insert(photoRecords)
-
-        if (photosError) throw photosError
+          if (photosError) {
+            console.error('[AddPinModal] Error inserting photo records:', photosError)
+            throw new Error(`Failed to save photos: ${photosError.message}`)
+          }
+          console.log('[AddPinModal] Photo records inserted successfully')
+        }
       }
 
       // Clean up object URLs
@@ -233,49 +267,58 @@ export default function AddPinModal({ isOpen, onClose, lat, lng, onPinAdded }: A
           <label htmlFor="photos" className="form-label">
             Photos (Optional)
           </label>
-          <input
-            id="photos"
-            type="file"
-            accept="image/*"
-            multiple
-            onChange={handlePhotoSelect}
-            className="form-input"
-            disabled={loading}
-            style={{ padding: '0.5rem' }}
-          />
+          <div className="relative">
+            <input
+              id="photos"
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handlePhotoSelect}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+              disabled={loading}
+            />
+            <button
+              type="button"
+              className="modal-button modal-button-secondary w-full"
+              style={{ marginTop: '0' }}
+              disabled={loading}
+              onClick={() => document.getElementById('photos')?.click()}
+            >
+              Choose Photos
+            </button>
+          </div>
           {photos.length > 0 && (
-            <div className="mt-4 space-y-3">
+            <div className="mt-4 space-y-4">
               {photos.map((photo, index) => (
-                <div key={index} className="relative border border-gray-300 rounded-lg p-3 bg-gray-50">
-                  <div className="flex gap-3">
+                <div key={index} className="w-full">
+                  <div className="relative w-full rounded-lg overflow-hidden" style={{ aspectRatio: '4/3', maxHeight: '300px' }}>
                     <img
                       src={photo.preview}
                       alt={`Preview ${index + 1}`}
-                      className="w-24 h-24 object-cover rounded"
+                      className="w-full h-full object-cover"
                     />
-                    <div className="flex-1">
-                      <input
-                        type="text"
-                        placeholder="Add caption (optional)"
-                        value={photo.caption}
-                        onChange={(e) => handlePhotoCaptionChange(index, e.target.value)}
-                        className="form-input mb-2"
-                        disabled={loading}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleRemovePhoto(index)}
-                        className="text-red-600 text-sm hover:text-red-800"
-                        disabled={loading}
-                      >
-                        Remove
-                      </button>
-                    </div>
+                  </div>
+                  <div className="mt-2 mb-4 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => handleRemovePhoto(index)}
+                      className="modal-button modal-button-secondary"
+                      style={{ 
+                        marginTop: '0',
+                        padding: '0.375rem 1rem',
+                        fontSize: '0.875rem',
+                        minHeight: 'auto'
+                      }}
+                      disabled={loading}
+                    >
+                      Remove
+                    </button>
                   </div>
                 </div>
               ))}
             </div>
           )}
+
         </div>
 
         {error && (

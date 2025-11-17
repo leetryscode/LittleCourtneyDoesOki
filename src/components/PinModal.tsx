@@ -2,6 +2,7 @@
 
 import BaseModal from './BaseModal'
 import CoordinatesDisplay from './CoordinatesDisplay'
+import ImageCarousel from './ImageCarousel'
 
 interface PinModalProps {
   isOpen: boolean
@@ -83,25 +84,15 @@ export default function PinModal({
         {pin?.photos && pin.photos.length > 0 && (
           <div>
             <h4 className="font-semibold text-gray-700 mb-3">Photos ({pin.photos.length}):</h4>
-            <div className="space-y-4">
-              {[...pin.photos]
+            <ImageCarousel
+              images={[...pin.photos]
                 .sort((a: any, b: any) => (a.order_index || 0) - (b.order_index || 0))
-                .map((photo: any, index: number) => (
-                  <div key={photo.id || index} className="relative">
-                    <img
-                      src={photo.url}
-                      alt={photo.caption || `${pin.title} - Photo ${index + 1}`}
-                      className="w-full h-auto max-h-96 object-contain rounded-lg shadow-md"
-                      loading="lazy"
-                    />
-                    {photo.caption && (
-                      <p className="text-sm text-gray-500 mt-2 text-center italic">
-                        {photo.caption}
-                      </p>
-                    )}
-                  </div>
-                ))}
-            </div>
+                .map((photo: any) => ({
+                  url: photo.url,
+                  caption: photo.caption,
+                  id: photo.id,
+                }))}
+            />
           </div>
         )}
 

@@ -16,7 +16,6 @@ interface EditPinModalProps {
 interface PhotoPreview {
   file?: File
   preview: string
-  caption: string
   id?: string
   url?: string
   isExisting?: boolean
@@ -49,7 +48,6 @@ export default function EditPinModal({ isOpen, onClose, pin, onPinUpdated }: Edi
           .sort((a, b) => (a.order_index || 0) - (b.order_index || 0))
           .map((photo) => ({
             preview: photo.url,
-            caption: photo.caption || '',
             id: photo.id,
             url: photo.url,
             isExisting: true,
@@ -66,7 +64,6 @@ export default function EditPinModal({ isOpen, onClose, pin, onPinUpdated }: Edi
     const newPhotos: PhotoPreview[] = files.map(file => ({
       file,
       preview: URL.createObjectURL(file),
-      caption: '',
       isExisting: false,
     }))
     setPhotos(prev => [...prev, ...newPhotos])
@@ -81,12 +78,6 @@ export default function EditPinModal({ isOpen, onClose, pin, onPinUpdated }: Edi
       }
       return prev.filter((_, i) => i !== index)
     })
-  }
-
-  const handlePhotoCaptionChange = (index: number, caption: string) => {
-    setPhotos(prev => prev.map((photo, i) => 
-      i === index ? { ...photo, caption } : photo
-    ))
   }
 
   const uploadPhotoToStorage = async (file: File, pinId: string, index: number): Promise<string> => {
@@ -161,14 +152,13 @@ export default function EditPinModal({ isOpen, onClose, pin, onPinUpdated }: Edi
         // }
       }
 
-      // Update existing photos (captions and order)
+      // Update existing photos (order only)
       for (let i = 0; i < photos.length; i++) {
         const photo = photos[i]
         if (photo.isExisting && photo.id) {
           await supabase
             .from('photos')
             .update({
-              caption: photo.caption || null,
               order_index: i,
             })
             .eq('id', photo.id)
@@ -180,12 +170,12 @@ export default function EditPinModal({ isOpen, onClose, pin, onPinUpdated }: Edi
       if (newPhotos.length > 0) {
         const photoPromises = newPhotos.map(async (photo, index) => {
           const url = await uploadPhotoToStorage(photo.file!, pin.id, index)
-          return {
-            pin_id: pin.id,
-            url,
-            caption: photo.caption || null,
-            order_index: photos.indexOf(photo),
-          }
+            return {
+              pin_id: pin.id,
+              url,
+              caption: null,
+              order_index: photos.indexOf(photo),
+            }
         })
 
         const photoRecords = await Promise.all(photoPromises)
@@ -304,50 +294,56 @@ export default function EditPinModal({ isOpen, onClose, pin, onPinUpdated }: Edi
           </select>
         </div>
 
-        
-
         <div className="form-field">
           <label htmlFor="photos" className="form-label">
             Photos
           </label>
-          <input
-            id="photos"
-            type="file"
-            accept="image/*"
-            multiple
-            onChange={handlePhotoSelect}
-            className="form-input"
-            disabled={loading}
-            style={{ padding: '0.5rem' }}
-          />
+          <div className="relative">
+            <input
+              id="photos-edit"
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handlePhotoSelect}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+              disabled={loading}
+            />
+            <button
+              type="button"
+              className="modal-button modal-button-secondary w-full"
+              style={{ marginTop: '0' }}
+              disabled={loading}
+              onClick={() => document.getElementById('photos-edit')?.click()}
+            >
+              Choose Photos
+            </button>
+          </div>
           {photos.length > 0 && (
-            <div className="mt-4 space-y-3">
+            <div className="mt-4 space-y-4">
               {photos.map((photo, index) => (
-                <div key={index} className="relative border border-gray-300 rounded-lg p-3 bg-gray-50">
-                  <div className="flex gap-3">
+                <div key={photo.id || index} className="w-full">
+                  <div className="relative w-full rounded-lg overflow-hidden" style={{ aspectRatio: '4/3', maxHeight: '300px' }}>
                     <img
-                      src={photo.preview}
+                      src={photo.preview || photo.url}
                       alt={`Preview ${index + 1}`}
-                      className="w-24 h-24 object-cover rounded"
+                      className="w-full h-full object-cover"
                     />
-                    <div className="flex-1">
-                      <input
-                        type="text"
-                        placeholder="Add caption (optional)"
-                        value={photo.caption}
-                        onChange={(e) => handlePhotoCaptionChange(index, e.target.value)}
-                        className="form-input mb-2"
-                        disabled={loading}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleRemovePhoto(index)}
-                        className="text-red-600 text-sm hover:text-red-800"
-                        disabled={loading}
-                      >
-                        Remove
-                      </button>
-                    </div>
+                  </div>
+                  <div className="mt-2 mb-4 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => handleRemovePhoto(index)}
+                      className="modal-button modal-button-secondary"
+                      style={{ 
+                        marginTop: '0',
+                        padding: '0.375rem 1rem',
+                        fontSize: '0.875rem',
+                        minHeight: 'auto'
+                      }}
+                      disabled={loading}
+                    >
+                      Remove
+                    </button>
                   </div>
                 </div>
               ))}
