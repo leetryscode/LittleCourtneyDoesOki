@@ -22,7 +22,9 @@ export interface Pin {
   lat: number
   lng: number
   author_id: string
+  created_by?: string | null
   rating: number
+  notes?: string | null
   created_at: string
   updated_at: string
 }
