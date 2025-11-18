@@ -113,9 +113,20 @@ export default function Home() {
   }, [])
 
   const handleLogout = async () => {
-    await supabase.auth.signOut()
-    setUser(null)
-    setIsAdmin(false)
+    console.log('[handleLogout] Logout button clicked')
+    try {
+      const { error } = await supabase.auth.signOut()
+      if (error) {
+        console.error('[handleLogout] Sign out error:', error)
+        throw error
+      }
+      console.log('[handleLogout] Sign out successful')
+      setUser(null)
+      setIsAdmin(false)
+      window.location.reload() // Refresh to clear auth state
+    } catch (error: any) {
+      console.error('[handleLogout] Error during logout:', error)
+    }
   }
 
   const handleAuth = async (data: { email: string; password: string; name?: string }) => {
@@ -229,7 +240,7 @@ export default function Home() {
     <div className="min-h-screen bg-gray-50 relative">
       {/* Floating Authentication Buttons - Top Right Position */}
       {!isPinModalOpen && !isAddPinModalOpen && !isEditPinModalOpen && (
-        <div className="fixed z-40 pointer-events-none" style={{ right: '1.5rem', top: '1.5rem', left: 'auto' }}>
+        <div className="fixed z-50 pointer-events-none" style={{ right: '1.5rem', top: '1.5rem', left: 'auto' }}>
         <div className="flex flex-row space-x-4 pointer-events-auto">
           {user ? (
             <button
