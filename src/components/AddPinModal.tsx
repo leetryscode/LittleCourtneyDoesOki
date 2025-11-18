@@ -145,7 +145,30 @@ export default function AddPinModal({ isOpen, onClose, lat, lng, onPinAdded }: A
 
     try {
       console.log('[AddPinModal] Start submit')
-      const { data: { user } } = await supabase.auth.getUser()
+      
+      // Add timeout to getUser() to prevent hanging
+      console.log('[AddPinModal] Getting user...')
+      const getUserPromise = supabase.auth.getUser()
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Authentication check timed out after 10 seconds')), 10000)
+      })
+      
+      let getUserResult: { data: { user: any } | null; error: any } | null = null
+      try {
+        getUserResult = await Promise.race([getUserPromise, timeoutPromise]) as { data: { user: any } | null; error: any }
+      } catch (timeoutError: any) {
+        console.error('[AddPinModal] getUser timeout or error:', timeoutError)
+        throw new Error(timeoutError.message || 'Authentication check failed')
+      }
+      
+      if (getUserResult?.error) {
+        console.error('[AddPinModal] getUser error:', getUserResult.error)
+        throw new Error(`Authentication error: ${getUserResult.error.message}`)
+      }
+      
+      const user = getUserResult?.data?.user
+      console.log('[AddPinModal] User retrieved:', user ? user.id : 'null')
+      
       if (!user) throw new Error('User not authenticated')
 
       // Create the pin first
