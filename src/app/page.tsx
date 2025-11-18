@@ -229,12 +229,12 @@ export default function Home() {
     <div className="min-h-screen bg-gray-50 relative">
       {/* Floating Authentication Buttons - Top Right Position */}
       <div className="fixed z-[100] pointer-events-none" style={{ right: '1.5rem', top: '1.5rem', left: 'auto' }}>
-        <div className="flex flex-row space-x-3 pointer-events-auto">
+        <div className="flex flex-row space-x-4 pointer-events-auto">
           {user ? (
             <button
               onClick={handleLogout}
               className="glass-button"
-              style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}
+              style={{ padding: '0.25rem 0.5rem', fontSize: '0.7rem' }}
             >
               Log out
             </button>
@@ -243,14 +243,14 @@ export default function Home() {
               <button
                 onClick={() => openAuthModal('login')}
                 className="glass-button"
-                style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}
+                style={{ padding: '0.25rem 0.5rem', fontSize: '0.7rem' }}
               >
                 Log in
               </button>
               <button
                 onClick={() => openAuthModal('signup')}
                 className="glass-button"
-                style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}
+                style={{ padding: '0.25rem 0.5rem', fontSize: '0.7rem' }}
               >
                 Sign up
               </button>

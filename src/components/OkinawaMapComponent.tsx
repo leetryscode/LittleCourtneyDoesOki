@@ -16,13 +16,13 @@ Icon.Default.mergeOptions({
 })
 
 const CATEGORY_FILTERS = [
-  { value: null, label: 'All', icon: '📍' },
-  { value: 'Beach', label: 'Beaches', icon: '🏖️' },
-  { value: 'Restaurant', label: 'Restaurants', icon: '🍽️' },
-  { value: 'Activity', label: 'Activities', icon: '🎯' },
-  { value: 'View', label: 'Views', icon: '🌅' },
-  { value: 'Historical', label: 'Historical', icon: '🏛️' },
-  { value: 'General', label: 'General', icon: '📍' },
+  { value: null, label: 'All' },
+  { value: 'Beach', label: 'Beaches' },
+  { value: 'Restaurant', label: 'Restaurants' },
+  { value: 'Activity', label: 'Activities' },
+  { value: 'View', label: 'Views' },
+  { value: 'Historical', label: 'Historical' },
+  { value: 'General', label: 'General' },
 ] as const
 
 type CategoryValue = (typeof CATEGORY_FILTERS)[number]['value']
@@ -166,7 +166,7 @@ interface CategoryFilterBarProps {
 function CategoryFilterBar({ selectedCategory, onSelect }: CategoryFilterBarProps) {
   return (
     <div className="pointer-events-none fixed z-[60] flex justify-center" style={{ bottom: '1.5rem', left: '1.5rem', right: '1.5rem' }}>
-      <div className="pointer-events-auto flex w-full max-w-4xl flex-wrap justify-center gap-3">
+      <div className="pointer-events-auto flex w-full max-w-3xl flex-wrap justify-center" style={{ gap: '0.25rem' }}>
         {CATEGORY_FILTERS.map((category) => {
           const isActive =
             category.value === null
@@ -179,10 +179,13 @@ function CategoryFilterBar({ selectedCategory, onSelect }: CategoryFilterBarProp
               type="button"
               aria-pressed={isActive}
               onClick={() => onSelect(category.value)}
-              className={`glass-button flex items-center justify-center gap-2 ${isActive ? 'glass-button--active' : ''}`}
-              style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}
+              className={`glass-button flex items-center justify-center ${isActive ? 'glass-button--active' : ''}`}
+              style={{ 
+                padding: '0.25rem 0.5rem', 
+                fontSize: '0.7rem',
+                color: 'rgba(255, 255, 255, 0.85)'
+              }}
             >
-              <span className="text-base">{category.icon}</span>
               <span className="whitespace-nowrap">{category.label}</span>
             </button>
           )
