@@ -47,9 +47,10 @@ interface OkinawaMapComponentProps {
   onPinClick: (pin: PinWithPhotos) => void
   onAddPin: (lat: number, lng: number) => void
   isAdmin: boolean
+  isModalOpen?: boolean
 }
 
-export default function OkinawaMapComponent({ onPinClick, onAddPin, isAdmin }: OkinawaMapComponentProps) {
+export default function OkinawaMapComponent({ onPinClick, onAddPin, isAdmin, isModalOpen = false }: OkinawaMapComponentProps) {
   const [pins, setPins] = useState<PinWithPhotos[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedCategory, setSelectedCategory] = useState<CategoryValue | null>(null)
@@ -150,10 +151,12 @@ export default function OkinawaMapComponent({ onPinClick, onAddPin, isAdmin }: O
         ))}
       </MapContainer>
 
-      <CategoryFilterBar
-        selectedCategory={selectedCategory}
-        onSelect={handleCategorySelect}
-      />
+      {!isModalOpen && (
+        <CategoryFilterBar
+          selectedCategory={selectedCategory}
+          onSelect={handleCategorySelect}
+        />
+      )}
     </div>
   )
 }
@@ -165,7 +168,7 @@ interface CategoryFilterBarProps {
 
 function CategoryFilterBar({ selectedCategory, onSelect }: CategoryFilterBarProps) {
   return (
-    <div className="pointer-events-none fixed z-[60] flex justify-center" style={{ bottom: '1.5rem', left: '1.5rem', right: '1.5rem' }}>
+    <div className="pointer-events-none fixed z-40 flex justify-center" style={{ bottom: '1.5rem', left: '1.5rem', right: '1.5rem' }}>
       <div className="pointer-events-auto flex w-full max-w-3xl flex-wrap justify-center" style={{ gap: '0.25rem' }}>
         {CATEGORY_FILTERS.map((category) => {
           const isActive =

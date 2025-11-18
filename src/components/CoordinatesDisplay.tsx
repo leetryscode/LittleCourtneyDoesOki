@@ -14,8 +14,14 @@ export default function CoordinatesDisplay({ lat, lng }: CoordinatesDisplayProps
         href={googleMapsUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-teal-400 hover:text-teal-300 transition-all duration-200 flex items-center gap-2 text-sm hover:gap-3 no-underline"
-        style={{ textDecoration: 'none' }}
+        className="transition-all duration-200 flex items-center gap-2 text-sm hover:gap-3 no-underline"
+        style={{ 
+          textDecoration: 'none',
+          color: '#67e8f9',
+          textDecorationColor: '#67e8f9'
+        }}
+        onMouseEnter={(e) => e.currentTarget.style.color = '#a5f3fc'}
+        onMouseLeave={(e) => e.currentTarget.style.color = '#67e8f9'}
         title={`${lat.toFixed(6)}, ${lng.toFixed(6)}`}
       >
         <span className="text-xl">📍</span>

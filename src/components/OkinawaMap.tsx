@@ -20,6 +20,7 @@ interface OkinawaMapProps {
   onPinClick: (pin: any) => void
   onAddPin: (lat: number, lng: number) => void
   isAdmin: boolean
+  isModalOpen?: boolean
 }
 
 export default function OkinawaMap(props: OkinawaMapProps) {

@@ -228,7 +228,8 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gray-50 relative">
       {/* Floating Authentication Buttons - Top Right Position */}
-      <div className="fixed z-[100] pointer-events-none" style={{ right: '1.5rem', top: '1.5rem', left: 'auto' }}>
+      {!isPinModalOpen && !isAddPinModalOpen && !isEditPinModalOpen && (
+        <div className="fixed z-40 pointer-events-none" style={{ right: '1.5rem', top: '1.5rem', left: 'auto' }}>
         <div className="flex flex-row space-x-4 pointer-events-auto">
           {user ? (
             <button
@@ -258,6 +259,7 @@ export default function Home() {
           )}
         </div>
       </div>
+      )}
 
       <Header
         isAuthenticated={!!user}
@@ -271,6 +273,7 @@ export default function Home() {
           onPinClick={handlePinClick}
           onAddPin={handleAddPin}
           isAdmin={isAdmin}
+          isModalOpen={isPinModalOpen || isAddPinModalOpen || isEditPinModalOpen}
         />
       </div>
 
