@@ -1,5 +1,6 @@
 'use client'
 
+import { PinWithPhotos } from '@/lib/supabase'
 import BaseModal from './BaseModal'
 import CoordinatesDisplay from './CoordinatesDisplay'
 import ImageCarousel from './ImageCarousel'
@@ -7,10 +8,9 @@ import ImageCarousel from './ImageCarousel'
 interface PinModalProps {
   isOpen: boolean
   onClose: () => void
-  pin: any
+  pin: PinWithPhotos
   isAdmin: boolean
-  onPinUpdate: () => void
-  onEditPin?: (pin: any) => void
+  onEditPin?: (pin: PinWithPhotos) => void
   onDeletePin?: (pinId: string) => void
   currentUserId?: string
 }
@@ -20,7 +20,6 @@ export default function PinModal({
   onClose, 
   pin, 
   isAdmin, 
-  onPinUpdate, 
   onEditPin, 
   onDeletePin, 
   currentUserId 
@@ -86,10 +85,10 @@ export default function PinModal({
             <h4 className="font-semibold text-gray-700 mb-3">Photos ({pin.photos.length}):</h4>
             <ImageCarousel
               images={[...pin.photos]
-                .sort((a: any, b: any) => (a.order_index || 0) - (b.order_index || 0))
-                .map((photo: any) => ({
+                .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0))
+                .map((photo) => ({
                   url: photo.url,
-                  caption: photo.caption,
+                  caption: photo.caption ?? undefined,
                   id: photo.id,
                 }))}
             />
@@ -110,6 +109,21 @@ export default function PinModal({
               style={{ marginLeft: '0', marginRight: '0' }}
             >
               Edit
+            </button>
+          )}
+          {isAuthor && onDeletePin && (
+            <button
+              onClick={() => onDeletePin(pin.id)}
+              className="modal-button modal-button-secondary"
+              style={{ 
+                marginLeft: '0',
+                marginRight: '0',
+                background: 'rgba(239, 68, 68, 0.1)',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                color: '#fca5a5',
+              }}
+            >
+              Delete
             </button>
           )}
           

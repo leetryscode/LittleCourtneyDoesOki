@@ -10,6 +10,13 @@ import EditPinModal from '@/components/EditPinModal'
 import AuthModal from '@/components/AuthModal'
 import { PinWithPhotos, User } from '@/lib/supabase'
 
+const getErrorMessage = (error: unknown) => {
+  if (error instanceof Error) {
+    return error.message
+  }
+  return typeof error === 'string' ? error : JSON.stringify(error)
+}
+
 export default function Home() {
   const [user, setUser] = useState<User | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
@@ -31,11 +38,12 @@ export default function Home() {
       
       if (authUser) {
         // Get or create user profile in our database
-        let { data: userProfile, error } = await supabase
+        const { data: initialProfile, error } = await supabase
           .from('users')
           .select('*')
           .eq('id', authUser.id)
           .single()
+        let userProfile = initialProfile
         
         if (error && error.code === 'PGRST116') {
           // User doesn't exist in our database, create them
@@ -73,11 +81,12 @@ export default function Home() {
       async (event, session) => {
         if (session?.user) {
           // Get or create user profile
-          let { data: userProfile, error } = await supabase
+          const { data: initialProfile, error } = await supabase
             .from('users')
             .select('*')
             .eq('id', session.user.id)
             .single()
+          let userProfile = initialProfile
           
           if (error && error.code === 'PGRST116') {
             // Create user profile
@@ -124,7 +133,7 @@ export default function Home() {
       setUser(null)
       setIsAdmin(false)
       window.location.reload() // Refresh to clear auth state
-    } catch (error: any) {
+    } catch (error) {
       console.error('[handleLogout] Error during logout:', error)
     }
   }
@@ -164,8 +173,8 @@ export default function Home() {
       
       setIsAuthModalOpen(false)
       window.location.reload()
-    } catch (error: any) {
-      setAuthError(error.message)
+    } catch (error) {
+      setAuthError(getErrorMessage(error))
     } finally {
       setAuthLoading(false)
     }
@@ -185,11 +194,6 @@ export default function Home() {
   const handleAddPin = (lat: number, lng: number) => {
     setAddPinLocation({ lat, lng })
     setIsAddPinModalOpen(true)
-  }
-
-  const handlePinUpdate = () => {
-    // Refresh the map to show updated pins
-    window.location.reload()
   }
 
   const handlePinAdded = () => {
@@ -232,7 +236,7 @@ export default function Home() {
       window.location.reload()
     } catch (error) {
       console.error('Error deleting pin:', error)
-      alert(`Failed to delete pin: ${error.message}`)
+      alert(`Failed to delete pin: ${getErrorMessage(error)}`)
     }
   }
 
@@ -272,12 +276,7 @@ export default function Home() {
       </div>
       )}
 
-      <Header
-        isAuthenticated={!!user}
-        isAdmin={isAdmin}
-        onLogout={handleLogout}
-        onAddPin={() => setIsAddPinModalOpen(true)}
-      />
+      <Header />
       
       <div className="relative -mt-[40vh] sm:-mt-[50vh] md:-mt-[60vh]">
         <OkinawaMap
@@ -297,7 +296,6 @@ export default function Home() {
           }}
           pin={selectedPin}
           isAdmin={isAdmin}
-          onPinUpdate={handlePinUpdate}
           onEditPin={handleEditPin}
           onDeletePin={handleDeletePin}
           currentUserId={user?.id}

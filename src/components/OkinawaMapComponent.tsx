@@ -8,7 +8,12 @@ import { PinWithPhotos } from '@/lib/supabase'
 import { supabase } from '@/lib/supabase'
 
 // Fix for default markers in react-leaflet
-delete (Icon.Default.prototype as any)._getIconUrl
+type IconPrototype = typeof Icon.Default.prototype & {
+  _getIconUrl?: () => string
+}
+
+const iconPrototype = Icon.Default.prototype as IconPrototype
+delete iconPrototype._getIconUrl
 Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
   iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
@@ -70,26 +75,25 @@ export default function OkinawaMapComponent({ onPinClick, onAddPin, isAdmin, isM
           photos (*)
         `)
         .order('created_at', { ascending: false })
+        .returns<PinWithPhotos[]>()
 
       // Sort photos by order_index for each pin
-      if (pinsData) {
-        pinsData.forEach((pin: any) => {
-          if (pin.photos && Array.isArray(pin.photos)) {
-            pin.photos.sort((a: any, b: any) => (a.order_index || 0) - (b.order_index || 0))
-          }
-        })
-      }
-
       if (error) {
         console.error('Supabase error:', error)
         setError('Failed to load locations. Please check your connection and try again.')
         setPins([])
       } else {
-        setPins(pinsData || [])
+        const sortedPins = (pinsData ?? []).map((pin) => ({
+          ...pin,
+          photos: [...(pin.photos ?? [])].sort(
+            (a, b) => (a.order_index ?? 0) - (b.order_index ?? 0)
+          ),
+        }))
+        setPins(sortedPins)
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching pins:', error)
-      const errorMessage = error.message?.includes('fetch') || error.message?.includes('network')
+      const errorMessage = error instanceof Error && (error.message.includes('fetch') || error.message.includes('network'))
         ? 'Network error. Please check your internet connection and try again.'
         : 'Failed to load locations. Please try again later.'
       setError(errorMessage)

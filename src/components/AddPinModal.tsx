@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { supabase } from '@/lib/supabase'
 import BaseModal from './BaseModal'
 import CoordinatesDisplay from './CoordinatesDisplay'
@@ -17,6 +18,20 @@ interface AddPinModalProps {
 interface PhotoPreview {
   file: File
   preview: string
+}
+
+type GetUserResult = Awaited<ReturnType<typeof supabase.auth.getUser>>
+
+type StorageUploadResult = {
+  data: { path: string } | null
+  error: { message: string } | null
+}
+
+const getErrorMessage = (error: unknown) => {
+  if (error instanceof Error) {
+    return error.message
+  }
+  return typeof error === 'string' ? error : JSON.stringify(error)
 }
 
 export default function AddPinModal({ isOpen, onClose, lat, lng, onPinAdded }: AddPinModalProps) {
@@ -113,12 +128,12 @@ export default function AddPinModal({ isOpen, onClose, lat, lng, onPinAdded }: A
         .from('photos')
         .upload(fileName, file)
 
-      const result = await Promise.race([uploadPromise, timeoutPromise])
+      const result = await Promise.race([uploadPromise, timeoutPromise]) as StorageUploadResult
       
       // Clear timeout if upload succeeded
       if (timeoutId) clearTimeout(timeoutId)
 
-      const { error: uploadError } = result as any
+      const { error: uploadError } = result
 
       if (uploadError) {
         console.error(`[AddPinModal] Upload error for photo ${index + 1}:`, uploadError)
@@ -131,7 +146,7 @@ export default function AddPinModal({ isOpen, onClose, lat, lng, onPinAdded }: A
 
       console.log(`[AddPinModal] Photo ${index + 1} uploaded successfully`)
       return data.publicUrl
-    } catch (error: any) {
+    } catch (error) {
       // Clear timeout on error
       if (timeoutId) clearTimeout(timeoutId)
       throw error
@@ -153,13 +168,7 @@ export default function AddPinModal({ isOpen, onClose, lat, lng, onPinAdded }: A
         setTimeout(() => reject(new Error('Authentication check timed out after 10 seconds')), 10000)
       })
       
-      let getUserResult: { data: { user: any } | null; error: any } | null = null
-      try {
-        getUserResult = await Promise.race([getUserPromise, timeoutPromise]) as { data: { user: any } | null; error: any }
-      } catch (timeoutError: any) {
-        console.error('[AddPinModal] getUser timeout or error:', timeoutError)
-        throw new Error(timeoutError.message || 'Authentication check failed')
-      }
+      const getUserResult = await Promise.race([getUserPromise, timeoutPromise]) as GetUserResult
       
       if (getUserResult?.error) {
         console.error('[AddPinModal] getUser error:', getUserResult.error)
@@ -208,10 +217,10 @@ export default function AddPinModal({ isOpen, onClose, lat, lng, onPinAdded }: A
               order_index: i,
             })
             console.log(`[AddPinModal] Photo ${i + 1} processed successfully`)
-          } catch (photoError: any) {
+          } catch (photoError) {
             console.error(`[AddPinModal] Failed to upload photo ${i + 1}:`, photoError)
             // Continue with other photos, but throw error at the end
-            throw new Error(`Failed to upload photo ${i + 1} (${photos[i].file.name}): ${photoError.message}`)
+            throw new Error(`Failed to upload photo ${i + 1} (${photos[i].file.name}): ${getErrorMessage(photoError)}`)
           }
         }
 
@@ -237,9 +246,9 @@ export default function AddPinModal({ isOpen, onClose, lat, lng, onPinAdded }: A
       setPhotos([])
       onPinAdded()
       onClose()
-    } catch (error: any) {
+    } catch (error) {
       console.error('[AddPinModal] Error:', error)
-      setError(error.message)
+      setError(getErrorMessage(error))
     } finally {
       console.log('[AddPinModal] Finished submit')
       setLoading(false)
@@ -363,10 +372,13 @@ export default function AddPinModal({ isOpen, onClose, lat, lng, onPinAdded }: A
               {photos.map((photo, index) => (
                 <div key={index} className="w-full">
                   <div className="relative w-full rounded-lg overflow-hidden" style={{ aspectRatio: '4/3', maxHeight: '300px' }}>
-                    <img
+                    <Image
                       src={photo.preview}
                       alt={`Preview ${index + 1}`}
-                      className="w-full h-full object-cover"
+                      fill
+                      sizes="(max-width: 768px) 100vw, 600px"
+                      className="object-cover"
+                      unoptimized
                     />
                   </div>
                   <div className="mt-2 mb-4 flex justify-end gap-2">

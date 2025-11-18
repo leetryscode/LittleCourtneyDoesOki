@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Image from 'next/image'
 import { supabase } from '@/lib/supabase'
 import BaseModal from './BaseModal'
 import CoordinatesDisplay from './CoordinatesDisplay'
@@ -21,6 +22,11 @@ interface PhotoPreview {
   id?: string
   url?: string
   isExisting?: boolean
+}
+
+const getErrorMessage = (error: unknown) => {
+  if (error instanceof Error) return error.message
+  return typeof error === 'string' ? error : JSON.stringify(error)
 }
 
 export default function EditPinModal({ isOpen, onClose, pin, onPinUpdated, onDeletePin }: EditPinModalProps) {
@@ -202,12 +208,6 @@ export default function EditPinModal({ isOpen, onClose, pin, onPinUpdated, onDel
 
       // Delete removed photos from database and storage
       if (photosToDeleteIds.length > 0) {
-        // Get photo URLs before deleting for storage cleanup
-        const { data: photosToDelete } = await supabase
-          .from('photos')
-          .select('url')
-          .in('id', photosToDeleteIds)
-
         // Delete from database
         const { error: deleteError } = await supabase
           .from('photos')
@@ -243,12 +243,12 @@ export default function EditPinModal({ isOpen, onClose, pin, onPinUpdated, onDel
       if (newPhotos.length > 0) {
         const photoPromises = newPhotos.map(async (photo, index) => {
           const url = await uploadPhotoToStorage(photo.file!, pin.id, index)
-            return {
-              pin_id: pin.id,
-              url,
-              caption: null,
-              order_index: photos.indexOf(photo),
-            }
+          return {
+            pin_id: pin.id,
+            url,
+            caption: null,
+            order_index: photos.indexOf(photo),
+          }
         })
 
         const photoRecords = await Promise.all(photoPromises)
@@ -269,8 +269,8 @@ export default function EditPinModal({ isOpen, onClose, pin, onPinUpdated, onDel
 
       onPinUpdated()
       onClose()
-    } catch (error: any) {
-      setError(error.message)
+    } catch (error) {
+      setError(getErrorMessage(error))
     } finally {
       setLoading(false)
     }
@@ -394,15 +394,20 @@ export default function EditPinModal({ isOpen, onClose, pin, onPinUpdated, onDel
           </div>
           {photos.length > 0 && (
             <div className="mt-4 space-y-4">
-              {photos.map((photo, index) => (
-                <div key={photo.id || index} className="w-full">
-                  <div className="relative w-full rounded-lg overflow-hidden" style={{ aspectRatio: '4/3', maxHeight: '300px' }}>
-                    <img
-                      src={photo.preview || photo.url}
-                      alt={`Preview ${index + 1}`}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
+              {photos.map((photo, index) => {
+                const imageSrc = photo.preview || photo.url || ''
+                return (
+                  <div key={photo.id || index} className="w-full">
+                    <div className="relative w-full rounded-lg overflow-hidden" style={{ aspectRatio: '4/3', maxHeight: '300px' }}>
+                      <Image
+                        src={imageSrc}
+                        alt={`Preview ${index + 1}`}
+                        fill
+                        sizes="(max-width: 768px) 100vw, 600px"
+                        className="object-cover"
+                        unoptimized={imageSrc.startsWith('blob:')}
+                      />
+                    </div>
                   <div className="mt-2 mb-4 flex justify-end gap-2">
                     <button
                       type="button"
@@ -433,8 +438,9 @@ export default function EditPinModal({ isOpen, onClose, pin, onPinUpdated, onDel
                       Remove
                     </button>
                   </div>
-                </div>
-              ))}
+                  </div>
+                )
+              })}
             </div>
           )}
         </div>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import Image from 'next/image'
 
 interface ImageCarouselProps {
   images: Array<{
@@ -43,11 +44,6 @@ export default function ImageCarousel({ images }: ImageCarouselProps) {
       setCurrentIndex(currentIndex - 1)
     }
   }
-
-  const goToSlide = (index: number) => {
-    setCurrentIndex(index)
-  }
-
 
   // Keyboard navigation
   useEffect(() => {
@@ -96,11 +92,13 @@ export default function ImageCarousel({ images }: ImageCarouselProps) {
                 </div>
               ) : (
                 <>
-                  <img
+                  <Image
                     src={image.url}
                     alt={image.caption || `Image ${index + 1}`}
-                    className="w-full h-full object-cover"
-                    loading={index === 0 ? 'eager' : 'lazy'}
+                    fill
+                    sizes="(max-width: 768px) 100vw, 600px"
+                    className="object-cover"
+                    priority={index === 0}
                     onError={() => {
                       setFailedImages(prev => new Set(prev).add(index))
                     }}

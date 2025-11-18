@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
+import { PinWithPhotos } from '@/lib/supabase'
 
 // Dynamically import the entire map component to avoid SSR issues
 const OkinawaMapComponent = dynamic(
@@ -17,7 +17,7 @@ const OkinawaMapComponent = dynamic(
 )
 
 interface OkinawaMapProps {
-  onPinClick: (pin: any) => void
+  onPinClick: (pin: PinWithPhotos) => void
   onAddPin: (lat: number, lng: number) => void
   isAdmin: boolean
   isModalOpen?: boolean
