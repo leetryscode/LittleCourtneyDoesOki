@@ -107,6 +107,58 @@ okinawa-travel-blog/
 - npm, yarn, or pnpm
 - Supabase account and project
 
+## 📦 **Deployment to Vercel**
+
+### **Pre-Deployment Checklist**
+✅ **Error Handling**
+- Image loading errors now show user-friendly messages
+- Network/API failures display clear error messages with retry options
+- Map loading errors are handled gracefully
+
+✅ **Production Optimizations**
+- Next.js config optimized for production
+- Image optimization configured for Supabase and external domains
+- Security headers configured (X-Powered-By removed)
+
+### **Deploying to Vercel**
+
+1. **Push your code to GitHub**
+   ```bash
+   git add .
+   git commit -m "Ready for deployment"
+   git push origin main
+   ```
+
+2. **Import to Vercel**
+   - Go to [vercel.com](https://vercel.com)
+   - Click "New Project"
+   - Import your GitHub repository
+   - Select the `okinawa-travel-blog` folder as the root directory
+
+3. **Configure Environment Variables**
+   In Vercel project settings, add these environment variables:
+   ```
+   NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   ```
+
+4. **Deploy**
+   - Vercel will automatically detect Next.js
+   - Click "Deploy"
+   - Your site will be live in minutes!
+
+### **Post-Deployment**
+- ✅ The Next.js "N" indicator automatically disappears in production builds
+- ✅ All images are optimized automatically
+- ✅ Error handling is in place for failed image loads and network issues
+- ✅ Production build is optimized and compressed
+
+### **Note on Next.js Indicator**
+The small "N" indicator you see in the corner during development is the **Next.js development indicator**. It:
+- **Automatically disappears** in production builds (when you deploy to Vercel)
+- Only appears when running `npm run dev` locally
+- Is not visible to end users on your deployed site
+
 ### **1. Clone and Install**
 ```bash
 git clone <your-repo-url>

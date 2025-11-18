@@ -53,6 +53,7 @@ interface OkinawaMapComponentProps {
 export default function OkinawaMapComponent({ onPinClick, onAddPin, isAdmin, isModalOpen = false }: OkinawaMapComponentProps) {
   const [pins, setPins] = useState<PinWithPhotos[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [selectedCategory, setSelectedCategory] = useState<CategoryValue | null>(null)
 
   useEffect(() => {
@@ -61,6 +62,7 @@ export default function OkinawaMapComponent({ onPinClick, onAddPin, isAdmin, isM
 
   const fetchPins = async () => {
     try {
+      setError(null)
       const { data: pinsData, error } = await supabase
         .from('pins')
         .select(`
@@ -80,14 +82,17 @@ export default function OkinawaMapComponent({ onPinClick, onAddPin, isAdmin, isM
 
       if (error) {
         console.error('Supabase error:', error)
-        // Set empty pins array on error, but don't fail completely
+        setError('Failed to load locations. Please check your connection and try again.')
         setPins([])
       } else {
         setPins(pinsData || [])
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching pins:', error)
-      // Set empty pins array on error, but don't fail completely
+      const errorMessage = error.message?.includes('fetch') || error.message?.includes('network')
+        ? 'Network error. Please check your internet connection and try again.'
+        : 'Failed to load locations. Please try again later.'
+      setError(errorMessage)
       setPins([])
     } finally {
       setLoading(false)
@@ -102,6 +107,26 @@ export default function OkinawaMapComponent({ onPinClick, onAddPin, isAdmin, isM
     return (
       <div className="w-full h-screen flex items-center justify-center bg-gray-100">
         <div className="text-lg">Loading map...</div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="w-full h-screen flex flex-col items-center justify-center bg-gray-100 p-4">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md text-center">
+          <svg className="w-12 h-12 mx-auto mb-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <p className="text-red-800 font-semibold mb-2">Error Loading Map</p>
+          <p className="text-red-600 text-sm mb-4">{error}</p>
+          <button
+            onClick={fetchPins}
+            className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
       </div>
     )
   }
