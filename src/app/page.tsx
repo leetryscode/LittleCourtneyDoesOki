@@ -34,68 +34,43 @@ export default function Home() {
   useEffect(() => {
     // Check authentication state
     const checkAuth = async () => {
-      const { data: { user: authUser } } = await supabase.auth.getUser()
-      
-      if (authUser) {
-        // Get or create user profile in our database
-        const { data: initialProfile, error } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', authUser.id)
-          .single()
-        let userProfile = initialProfile
+      try {
+        const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
         
-        if (error && error.code === 'PGRST116') {
-          // User doesn't exist in our database, create them
-          const { data: newProfile, error: createError } = await supabase
-            .from('users')
-            .insert({
-              id: authUser.id,
-              email: authUser.email!,
-              name: authUser.user_metadata?.full_name || 'User',
-            })
-            .select()
-            .single()
-          
-          if (createError) {
-            console.error('Error creating user profile:', createError)
-          } else {
-            userProfile = newProfile
+        // Handle invalid refresh token errors gracefully
+        if (authError) {
+          // Check if it's a refresh token error
+          if (authError.message?.includes('Refresh Token') || authError.message?.includes('refresh_token')) {
+            // Clear the invalid session silently
+            await supabase.auth.signOut({ scope: 'local' })
+            setUser(null)
+            setIsAdmin(false)
+            return
           }
+          // For other errors, just log and continue as unauthenticated
+          console.warn('Auth check error:', authError.message)
+          setUser(null)
+          setIsAdmin(false)
+          return
         }
         
-        if (userProfile) {
-          setUser(userProfile)
-          setIsAdmin(true) // For now, any authenticated user can add pins
-        }
-      } else {
-        setUser(null)
-        setIsAdmin(false)
-      }
-    }
-
-    checkAuth()
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (session?.user) {
-          // Get or create user profile
+        if (authUser) {
+          // Get or create user profile in our database
           const { data: initialProfile, error } = await supabase
             .from('users')
             .select('*')
-            .eq('id', session.user.id)
+            .eq('id', authUser.id)
             .single()
           let userProfile = initialProfile
           
           if (error && error.code === 'PGRST116') {
-            // Create user profile
+            // User doesn't exist in our database, create them
             const { data: newProfile, error: createError } = await supabase
               .from('users')
               .insert({
-                id: session.user.id,
-                email: session.user.email!,
-                name: session.user.user_metadata?.full_name || 'User',
+                id: authUser.id,
+                email: authUser.email!,
+                name: authUser.user_metadata?.full_name || 'User',
               })
               .select()
               .single()
@@ -109,9 +84,78 @@ export default function Home() {
           
           if (userProfile) {
             setUser(userProfile)
-            setIsAdmin(true)
+            setIsAdmin(true) // For now, any authenticated user can add pins
           }
         } else {
+          setUser(null)
+          setIsAdmin(false)
+        }
+      } catch (error) {
+        // Catch any unexpected errors
+        console.warn('Unexpected auth error:', error)
+        setUser(null)
+        setIsAdmin(false)
+      }
+    }
+
+    checkAuth()
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        // Handle token refresh errors
+        if (event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN') {
+          if (session?.user) {
+            // Get or create user profile
+            const { data: initialProfile, error } = await supabase
+              .from('users')
+              .select('*')
+              .eq('id', session.user.id)
+              .single()
+            let userProfile = initialProfile
+            
+            if (error && error.code === 'PGRST116') {
+              // Create user profile
+              const { data: newProfile, error: createError } = await supabase
+                .from('users')
+                .insert({
+                  id: session.user.id,
+                  email: session.user.email!,
+                  name: session.user.user_metadata?.full_name || 'User',
+                })
+                .select()
+                .single()
+              
+              if (createError) {
+                console.error('Error creating user profile:', createError)
+              } else {
+                userProfile = newProfile
+              }
+            }
+            
+            if (userProfile) {
+              setUser(userProfile)
+              setIsAdmin(true)
+            }
+          }
+        } else if (event === 'SIGNED_OUT' || event === 'USER_UPDATED') {
+          if (session?.user) {
+            // User still signed in after update
+            const { data: initialProfile } = await supabase
+              .from('users')
+              .select('*')
+              .eq('id', session.user.id)
+              .single()
+            
+            if (initialProfile) {
+              setUser(initialProfile)
+              setIsAdmin(true)
+            }
+          } else {
+            setUser(null)
+            setIsAdmin(false)
+          }
+        } else if (!session) {
           setUser(null)
           setIsAdmin(false)
         }

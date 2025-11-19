@@ -162,9 +162,10 @@ export default function OkinawaMapComponent({ onPinClick, onAddPin, isAdmin, isM
         scrollWheelZoom={true}
       >
         <TileLayer
-          url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-          attribution='&copy; <a href="https://www.esri.com/">Esri</a>'
-          maxZoom={19}
+          url="https://mt{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}"
+          subdomains={['0', '1', '2', '3']}
+          attribution='&copy; <a href="https://www.google.com/maps">Google</a>'
+          maxZoom={21}
         />
 
         <MapClickHandler onMapClick={handleMapClick} isAdmin={isAdmin} />
