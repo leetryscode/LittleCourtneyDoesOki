@@ -12,10 +12,10 @@ export default function Header() {
   }, [])
 
   return (
-    <header className="relative min-h-[40vh] sm:min-h-[50vh] md:min-h-[60vh] overflow-hidden">
+    <header className="relative min-h-[40vh] sm:min-h-[50vh] md:min-h-[60vh] overflow-hidden pointer-events-none">
       {/* Background Image with Parallax */}
       <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat pointer-events-none"
         style={{
           backgroundImage: 'url("https://images.unsplash.com/photo-1578662996442-48f60103fc96?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80")',
           transform: `translateY(${scrollY * 0.5}px)`,
@@ -24,7 +24,7 @@ export default function Header() {
       />
       
       {/* Overlay for better text readability */}
-      <div className="absolute inset-0 bg-gradient-to-b from-blue-900/40 via-blue-800/30 to-blue-900/50" />
+      <div className="absolute inset-0 bg-gradient-to-b from-blue-900/40 via-blue-800/30 to-blue-900/50 pointer-events-none" />
       
       {/* Content Container */}
       <div className="relative z-10 flex flex-col justify-center items-center min-h-[40vh] sm:min-h-[50vh] md:min-h-[60vh] px-4 sm:px-6 lg:px-8">

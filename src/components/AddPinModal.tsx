@@ -22,6 +22,7 @@ interface PhotoPreview {
 
 type GetUserResult = Awaited<ReturnType<typeof supabase.auth.getUser>>
 type GetSessionResult = Awaited<ReturnType<typeof supabase.auth.getSession>>
+type SupabaseAuthUser = GetUserResult['data']['user']
 
 type StorageUploadResult = {
   data: { path: string } | null
@@ -158,7 +159,7 @@ export default function AddPinModal({ isOpen, onClose, lat, lng, onPinAdded }: A
     }
   }
 
-  const getUserFromSession = async (): Promise<GetSessionResult['data']['session']['user'] | null> => {
+  const getUserFromSession = async (): Promise<SupabaseAuthUser | null> => {
     const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
 
     if (sessionError) {
