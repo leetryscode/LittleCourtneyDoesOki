@@ -21,11 +21,16 @@ interface PhotoPreview {
 }
 
 type GetUserResult = Awaited<ReturnType<typeof supabase.auth.getUser>>
+type GetSessionResult = Awaited<ReturnType<typeof supabase.auth.getSession>>
 
 type StorageUploadResult = {
   data: { path: string } | null
   error: { message: string } | null
 }
+
+const AUTH_TIMEOUT_MS = 20000
+const AUTH_MAX_ATTEMPTS = 2
+const AUTH_RETRY_DELAY_MS = 1500
 
 const getErrorMessage = (error: unknown) => {
   if (error instanceof Error) {
@@ -153,6 +158,74 @@ export default function AddPinModal({ isOpen, onClose, lat, lng, onPinAdded }: A
     }
   }
 
+  const getUserFromSession = async (): Promise<GetSessionResult['data']['session']['user'] | null> => {
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+
+    if (sessionError) {
+      if (sessionError.message?.includes('Refresh Token') || sessionError.message?.includes('refresh_token')) {
+        await supabase.auth.signOut({ scope: 'local' })
+        throw new Error('Session expired. Please sign in again.')
+      }
+
+      console.warn('[AddPinModal] getSession warning:', sessionError.message)
+      return null
+    }
+
+    return sessionData?.session?.user ?? null
+  }
+
+  const getUserWithTimeout = async (): Promise<GetUserResult['data']['user'] | null> => {
+    const getUserPromise = supabase.auth.getUser()
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(
+        () => reject(new Error(`Authentication check timed out after ${AUTH_TIMEOUT_MS / 1000} seconds`)),
+        AUTH_TIMEOUT_MS
+      )
+    })
+
+    const getUserResult = await Promise.race([getUserPromise, timeoutPromise]) as GetUserResult
+
+    if (getUserResult?.error) {
+      if (getUserResult.error.message?.includes('Refresh Token') || getUserResult.error.message?.includes('refresh_token')) {
+        await supabase.auth.signOut({ scope: 'local' })
+        throw new Error('Session expired. Please sign in again.')
+      }
+
+      console.error('[AddPinModal] getUser error:', getUserResult.error)
+      throw new Error(`Authentication error: ${getUserResult.error.message}`)
+    }
+
+    return getUserResult?.data?.user ?? null
+  }
+
+  const fetchAuthenticatedUser = async (attempt = 1): Promise<GetUserResult['data']['user']> => {
+    try {
+      const sessionUser = await getUserFromSession()
+      if (sessionUser) {
+        return sessionUser
+      }
+
+      const user = await getUserWithTimeout()
+      if (!user) {
+        throw new Error('User not authenticated')
+      }
+
+      return user
+    } catch (error) {
+      if (
+        attempt < AUTH_MAX_ATTEMPTS &&
+        error instanceof Error &&
+        error.message.toLowerCase().includes('timed out')
+      ) {
+        console.warn(`[AddPinModal] Auth attempt ${attempt} timed out. Retrying...`)
+        await new Promise(resolve => setTimeout(resolve, AUTH_RETRY_DELAY_MS))
+        return fetchAuthenticatedUser(attempt + 1)
+      }
+
+      throw error
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
@@ -160,24 +233,11 @@ export default function AddPinModal({ isOpen, onClose, lat, lng, onPinAdded }: A
 
     try {
       console.log('[AddPinModal] Start submit')
-      
-      // Add timeout to getUser() to prevent hanging
-      console.log('[AddPinModal] Getting user...')
-      const getUserPromise = supabase.auth.getUser()
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Authentication check timed out after 10 seconds')), 10000)
-      })
-      
-      const getUserResult = await Promise.race([getUserPromise, timeoutPromise]) as GetUserResult
-      
-      if (getUserResult?.error) {
-        console.error('[AddPinModal] getUser error:', getUserResult.error)
-        throw new Error(`Authentication error: ${getUserResult.error.message}`)
-      }
-      
-      const user = getUserResult?.data?.user
+
+      console.log('[AddPinModal] Resolving authenticated user...')
+      const user = await fetchAuthenticatedUser()
       console.log('[AddPinModal] User retrieved:', user ? user.id : 'null')
-      
+
       if (!user) throw new Error('User not authenticated')
 
       // Create the pin first

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet'
 import { Icon } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { PinWithPhotos } from '@/lib/supabase'
@@ -35,6 +35,32 @@ type CategoryValue = (typeof CATEGORY_FILTERS)[number]['value']
 interface MapClickHandlerProps {
   onMapClick: (lat: number, lng: number) => void
   isAdmin: boolean
+}
+
+// Component to ensure map is properly initialized and sized
+function MapInitializer() {
+  const map = useMap()
+  
+  useEffect(() => {
+    // Ensure map is properly sized after initialization
+    // This is critical for first load, especially when container becomes visible
+    const timer = setTimeout(() => {
+      map.invalidateSize()
+    }, 100)
+    
+    // Also invalidate on window resize
+    const handleResize = () => {
+      map.invalidateSize()
+    }
+    window.addEventListener('resize', handleResize)
+    
+    return () => {
+      clearTimeout(timer)
+      window.removeEventListener('resize', handleResize)
+    }
+  }, [map])
+  
+  return null
 }
 
 function MapClickHandler({ onMapClick, isAdmin }: MapClickHandlerProps) {
@@ -107,34 +133,6 @@ export default function OkinawaMapComponent({ onPinClick, onAddPin, isAdmin, isM
     onAddPin(lat, lng)
   }
 
-  if (loading) {
-    return (
-      <div className="w-full h-screen flex items-center justify-center bg-gray-100">
-        <div className="text-lg">Loading map...</div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="w-full h-screen flex flex-col items-center justify-center bg-gray-100 p-4">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md text-center">
-          <svg className="w-12 h-12 mx-auto mb-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <p className="text-red-800 font-semibold mb-2">Error Loading Map</p>
-          <p className="text-red-600 text-sm mb-4">{error}</p>
-          <button
-            onClick={fetchPins}
-            className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
-          >
-            Try Again
-          </button>
-        </div>
-      </div>
-    )
-  }
-
   const visiblePins = selectedCategory
     ? pins.filter((pin) => {
         if (!pin.category) return false
@@ -152,15 +150,39 @@ export default function OkinawaMapComponent({ onPinClick, onAddPin, isAdmin, isM
     }
   }
 
+  // Render map immediately - don't wait for pins to load
+  // This ensures Leaflet initializes properly on first load
   return (
     <div className="relative w-full h-screen">
+      {error && (
+        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-[1000] bg-red-50 border border-red-200 rounded-lg p-4 max-w-md text-center shadow-lg">
+          <p className="text-red-800 font-semibold mb-2">Error Loading Locations</p>
+          <p className="text-red-600 text-sm mb-3">{error}</p>
+          <button
+            onClick={fetchPins}
+            className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-sm"
+          >
+            Try Again
+          </button>
+        </div>
+      )}
+      
+      {loading && (
+        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-[1000] bg-white/90 backdrop-blur-sm border border-gray-200 rounded-lg px-4 py-2 shadow-lg">
+          <div className="text-sm text-gray-700">Loading locations...</div>
+        </div>
+      )}
+      
       <MapContainer
         center={[26.65, 127.9764]}
         zoom={9}
         className="w-full h-screen"
         zoomControl={false}
         scrollWheelZoom={true}
+        key="okinawa-map" // Force remount if needed
       >
+        <MapInitializer />
+        
         <TileLayer
           url="https://mt{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}"
           subdomains={['0', '1', '2', '3']}
